@@ -8,6 +8,7 @@ import '../widgets/add_customer_dialog.dart';
 import '../widgets/add_record_dialog.dart';
 import '../widgets/backup_restore_dialog.dart';
 import '../constants/app_config.dart';
+import '../services/app_title_service.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -24,11 +25,30 @@ class _MainScreenState extends State<MainScreen> {
   bool _isLoading = true;
   SortType _sortType = SortType.name;
   SortOrder _sortOrder = SortOrder.asc;
+  String _appTitle = AppConfig.appName; // 기본값
 
   @override
   void initState() {
     super.initState();
+    _loadAppTitle();
     _loadCustomers();
+  }
+
+  /// 외부 txt 파일에서 AppBar 제목을 읽어옵니다
+  Future<void> _loadAppTitle() async {
+    try {
+      final title = await AppTitleService.getAppTitle(
+        defaultTitle: AppConfig.appName,
+      );
+      if (mounted) {
+        setState(() {
+          _appTitle = title;
+        });
+      }
+    } catch (e) {
+      // 오류 발생 시 기본값 사용
+      debugPrint('Failed to load app title: $e');
+    }
   }
 
   Future<void> _loadCustomers() async {
@@ -586,7 +606,7 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(AppConfig.appName),
+        title: Text(_appTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep),
