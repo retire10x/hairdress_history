@@ -27,7 +27,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"hairdress_history", origin, size)) {
+  // NOTE: 창 제목은 lib/constants/app_config.dart의 AppConfig.appName과 동일해야 합니다.
+  if (!window.Create(L"반하다헤어", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

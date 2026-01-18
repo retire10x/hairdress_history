@@ -7,6 +7,7 @@ import '../widgets/service_timeline.dart';
 import '../widgets/add_customer_dialog.dart';
 import '../widgets/add_record_dialog.dart';
 import '../widgets/backup_restore_dialog.dart';
+import '../constants/app_config.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -21,6 +22,8 @@ class _MainScreenState extends State<MainScreen> {
   Customer? _selectedCustomer;
   List<ServiceRecord> _serviceRecords = [];
   bool _isLoading = true;
+  SortType _sortType = SortType.name;
+  SortOrder _sortOrder = SortOrder.asc;
 
   @override
   void initState() {
@@ -34,7 +37,24 @@ class _MainScreenState extends State<MainScreen> {
     });
 
     try {
-      final customers = await _db.getAllCustomers();
+      // SortType enum의 name을 데이터베이스 쿼리 형식으로 변환
+      String sortByValue;
+      switch (_sortType) {
+        case SortType.name:
+          sortByValue = 'name';
+          break;
+        case SortType.serviceDate:
+          sortByValue = 'service_date';
+          break;
+        case SortType.amount:
+          sortByValue = 'amount';
+          break;
+      }
+      
+      final customers = await _db.getAllCustomers(
+        sortBy: sortByValue,
+        order: _sortOrder.name.toUpperCase(),
+      );
       setState(() {
         _customers = customers;
         _isLoading = false;
@@ -59,6 +79,130 @@ class _MainScreenState extends State<MainScreen> {
       }
       debugPrint('고객 목록 불러오기 오류: $e');
       debugPrint('스택 트레이스: $stackTrace');
+    }
+  }
+
+  void _onSortChanged(SortType sortType, SortOrder sortOrder) {
+    setState(() {
+      _sortType = sortType;
+      _sortOrder = sortOrder;
+    });
+    _loadCustomers();
+  }
+
+  Future<void> _clearAllData() async {
+    // 비밀번호 입력 다이얼로그
+    final passwordController = TextEditingController();
+    final passwordResult = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('데이터 초기화'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('모든 고객과 서비스 기록이 삭제됩니다.\n비밀번호를 입력하세요.'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              decoration: const InputDecoration(
+                labelText: '비밀번호',
+                border: OutlineInputBorder(),
+              ),
+              obscureText: false,
+              keyboardType: TextInputType.phone,
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (passwordController.text.trim() == '01027870380') {
+                Navigator.of(context).pop(true);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('비밀번호가 일치하지 않습니다.'),
+                    backgroundColor: Colors.red,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            child: const Text('초기화'),
+          ),
+        ],
+      ),
+    );
+
+    if (passwordResult == true) {
+      // 최종 확인
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('최종 확인'),
+          content: const Text('정말로 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('취소'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('삭제'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        setState(() {
+          _isLoading = true;
+        });
+
+        try {
+          await _db.clearAllData();
+          setState(() {
+            _customers = [];
+            _selectedCustomer = null;
+            _serviceRecords = [];
+            _isLoading = false;
+          });
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('모든 데이터가 삭제되었습니다.'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        } catch (e, stackTrace) {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('데이터 초기화 중 오류가 발생했습니다: $e'),
+                duration: const Duration(seconds: 5),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          debugPrint('데이터 초기화 오류: $e');
+          debugPrint('스택 트레이스: $stackTrace');
+        }
+      }
     }
   }
 
@@ -368,15 +512,32 @@ class _MainScreenState extends State<MainScreen> {
           if (!mounted) return;
           
           // 데이터 복원 후 강제로 새로고침
+          // 초기화 버튼과 동일한 방식으로 처리
           setState(() {
             _selectedCustomer = null;
             _serviceRecords = [];
             _isLoading = true;
           });
           
-          // 데이터 다시 로드
           try {
-            final customers = await _db.getAllCustomers();
+            // SortType enum의 name을 데이터베이스 쿼리 형식으로 변환
+            String sortByValue;
+            switch (_sortType) {
+              case SortType.name:
+                sortByValue = 'name';
+                break;
+              case SortType.serviceDate:
+                sortByValue = 'service_date';
+                break;
+              case SortType.amount:
+                sortByValue = 'amount';
+                break;
+            }
+            
+            final customers = await _db.getAllCustomers(
+              sortBy: sortByValue,
+              order: _sortOrder.name.toUpperCase(),
+            );
             
             if (mounted) {
               setState(() {
@@ -389,26 +550,30 @@ class _MainScreenState extends State<MainScreen> {
                 await _selectCustomer(customers.first);
               }
               
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('데이터가 복원되었습니다 (고객 ${customers.length}명)'),
-                  backgroundColor: Colors.green,
-                  duration: const Duration(seconds: 3),
-                ),
-              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('데이터가 복원되었습니다 (고객 ${customers.length}명)'),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
             }
-          } catch (e) {
+          } catch (e, stackTrace) {
             if (mounted) {
               setState(() {
                 _isLoading = false;
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('데이터 로드 중 오류: $e'),
+                  content: Text('데이터 로드 중 오류가 발생했습니다: $e'),
                   backgroundColor: Colors.red,
-                  duration: const Duration(seconds: 3),
+                  duration: const Duration(seconds: 5),
                 ),
               );
+              debugPrint('복원 후 데이터 로드 오류: $e');
+              debugPrint('스택 트레이스: $stackTrace');
             }
           }
         },
@@ -421,8 +586,13 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('미용실 고객 관리'),
+        title: const Text(AppConfig.appName),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            tooltip: '데이터 초기화',
+            onPressed: _clearAllData,
+          ),
           IconButton(
             icon: const Icon(Icons.backup),
             tooltip: '백업/복원',
@@ -446,6 +616,9 @@ class _MainScreenState extends State<MainScreen> {
                     onAddCustomer: _showAddCustomerDialog,
                     onEditCustomer: _showEditCustomerDialog,
                     onDeleteCustomer: _showDeleteCustomerDialog,
+                    sortType: _sortType,
+                    sortOrder: _sortOrder,
+                    onSortChanged: _onSortChanged,
                   ),
                 ),
                 // 구분선

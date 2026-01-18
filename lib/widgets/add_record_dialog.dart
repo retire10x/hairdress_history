@@ -52,25 +52,27 @@ class _AddRecordDialogState extends State<AddRecordDialog> {
     return Dialog(
       child: Container(
         width: 600,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.record == null ? '서비스 기록 추가' : '서비스 기록 수정',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue,
-                  ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.record == null ? '서비스 기록 추가' : '서비스 기록 수정',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
                 ),
-                const SizedBox(height: 24),
-                // 날짜 선택
-                InkWell(
+              ),
+              const SizedBox(height: 24),
+              // 날짜 선택
+              InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
                       context: context,
@@ -114,9 +116,9 @@ class _AddRecordDialogState extends State<AddRecordDialog> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                // 시술 내용
-                TextFormField(
+              const SizedBox(height: 16),
+              // 시술 내용
+              TextFormField(
                   controller: _serviceContentController,
                   decoration: const InputDecoration(
                     labelText: '시술 내용 *',
@@ -127,17 +129,17 @@ class _AddRecordDialogState extends State<AddRecordDialog> {
                     ),
                   ),
                   style: const TextStyle(fontSize: 16),
-                  maxLines: 3,
+                  maxLines: 1,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return '시술 내용을 입력해주세요';
                     }
                     return null;
                   },
-                ),
-                const SizedBox(height: 16),
-                // 약품명
-                TextFormField(
+              ),
+              const SizedBox(height: 16),
+              // 약품명
+              TextFormField(
                   controller: _productNameController,
                   decoration: const InputDecoration(
                     labelText: '약품명',
@@ -148,19 +150,19 @@ class _AddRecordDialogState extends State<AddRecordDialog> {
                     ),
                   ),
                   style: const TextStyle(fontSize: 16),
-                  maxLines: 2,
+                  maxLines: 1,
+              ),
+              const SizedBox(height: 16),
+              // 결제 타입
+              const Text(
+                '결제 타입 *',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(height: 16),
-                // 결제 타입
-                const Text(
-                  '결제 타입 *',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
+              ),
+              const SizedBox(height: 8),
+              Row(
                   children: PaymentType.values.map((type) {
                     final isSelected = _paymentType == type;
                     return Expanded(
@@ -187,10 +189,10 @@ class _AddRecordDialogState extends State<AddRecordDialog> {
                       ),
                     );
                   }).toList(),
-                ),
-                const SizedBox(height: 16),
-                // 금액
-                TextFormField(
+              ),
+              const SizedBox(height: 16),
+              // 금액
+              TextFormField(
                   controller: _amountController,
                   decoration: const InputDecoration(
                     labelText: '금액 *',
@@ -211,10 +213,10 @@ class _AddRecordDialogState extends State<AddRecordDialog> {
                     }
                     return null;
                   },
-                ),
-                const SizedBox(height: 16),
-                // 메모
-                TextFormField(
+              ),
+              const SizedBox(height: 16),
+              // 메모
+              TextFormField(
                   controller: _memoController,
                   decoration: const InputDecoration(
                     labelText: '메모',
@@ -225,42 +227,41 @@ class _AddRecordDialogState extends State<AddRecordDialog> {
                     ),
                   ),
                   style: const TextStyle(fontSize: 16),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 24),
-                // 버튼
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        minimumSize: const Size(0, 50),
+                  maxLines: 1,
+              ),
+              const SizedBox(height: 24),
+              // 버튼
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
                       ),
-                      child: const Text('취소'),
+                      minimumSize: const Size(0, 50),
                     ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        minimumSize: const Size(0, 50),
+                    child: const Text('취소'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: _save,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
                       ),
-                      child: const Text('저장'),
+                      minimumSize: const Size(0, 50),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                    child: const Text('저장'),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

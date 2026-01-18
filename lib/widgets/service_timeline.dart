@@ -21,6 +21,28 @@ class ServiceTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 총 서비스 금액 계산
+    final totalAmount = records.fold<int>(
+      0,
+      (sum, record) => sum + record.amount,
+    );
+    final formattedTotal = NumberFormat('#,###').format(totalAmount);
+    
+    // 최초일/최종일 계산
+    DateTime? firstDate;
+    DateTime? lastDate;
+    if (records.isNotEmpty) {
+      final dates = records.map((r) => r.serviceDate).toList();
+      dates.sort();
+      firstDate = dates.first;
+      lastDate = dates.last;
+    }
+    
+    // 날짜 포맷 (숫자만: YYYYMMDD)
+    String formatDate(DateTime date) {
+      return '${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}';
+    }
+
     return Column(
       children: [
         // 고객 정보 섹션
@@ -76,7 +98,7 @@ class ServiceTimeline extends StatelessWidget {
                         color: Colors.blue[700],
                       ),
                       const SizedBox(width: 4),
-                      Expanded(
+                      Flexible(
                         child: Text(
                           customer.memo!,
                           style: TextStyle(
@@ -91,18 +113,44 @@ class ServiceTimeline extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
+              // 최초일/최종일 및 합계 표시
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (firstDate != null && lastDate != null) ...[
+                    Text(
+                      '${formatDate(firstDate)}/${formatDate(lastDate)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    '합계: $formattedTotal원',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green[700],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 12),
               ElevatedButton.icon(
                 onPressed: onAddRecord,
-                icon: const Icon(Icons.add),
-                label: const Text('기록 추가'),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('기록 추가', style: TextStyle(fontSize: 12)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                    horizontal: 10,
+                    vertical: 4,
                   ),
-                  minimumSize: const Size(0, 50),
+                  minimumSize: const Size(0, 28),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ),
             ],
@@ -162,7 +210,7 @@ class ServiceTimeline extends StatelessWidget {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: records.length,
                   itemBuilder: (context, index) {
                     final record = records[index];
@@ -209,32 +257,32 @@ class _TimelineItem extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 12,
-              height: 12,
+              width: 10,
+              height: 10,
               decoration: BoxDecoration(
                 color: Colors.blue,
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: Colors.white,
-                  width: 2,
+                  width: 1.5,
                 ),
               ),
             ),
             if (!isLast)
               Container(
                 width: 2,
-                height: 12,
+                height: 8,
                 color: Colors.blue[200],
-                margin: const EdgeInsets.symmetric(vertical: 2),
+                margin: const EdgeInsets.symmetric(vertical: 1),
               ),
           ],
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
         // 기록 내용
         Expanded(
           child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
@@ -254,21 +302,21 @@ class _TimelineItem extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.calendar_today,
-                        size: 14,
+                        size: 12,
                         color: Colors.blue[700],
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 3),
                       Text(
                         '${dateFormat.format(record.serviceDate)} ${timeFormat.format(record.serviceDate)}',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: Colors.blue[900],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   // 시술 내용
                   Expanded(
                     flex: 2,
@@ -276,15 +324,15 @@ class _TimelineItem extends StatelessWidget {
                       children: [
                         Icon(
                           Icons.content_cut,
-                          size: 14,
+                          size: 12,
                           color: Colors.blue[700],
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 3),
                         Expanded(
                           child: Text(
                             record.serviceContent,
                             style: const TextStyle(
-                              fontSize: 14,
+                              fontSize: 13,
                               color: Colors.black87,
                             ),
                             overflow: TextOverflow.ellipsis,
@@ -295,22 +343,22 @@ class _TimelineItem extends StatelessWidget {
                   ),
                   if (record.productName != null &&
                       record.productName!.isNotEmpty) ...[
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       flex: 1,
                       child: Row(
                         children: [
                           Icon(
                             Icons.medication,
-                            size: 14,
+                            size: 12,
                             color: Colors.blue[700],
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 3),
                           Expanded(
                             child: Text(
                               record.productName!,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: 12,
                                 color: Colors.grey[700],
                                 fontStyle: FontStyle.italic,
                               ),
@@ -321,66 +369,66 @@ class _TimelineItem extends StatelessWidget {
                       ),
                     ),
                   ],
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   // 결제 타입
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 6,
+                      vertical: 2,
                     ),
                     decoration: BoxDecoration(
                       color: _getPaymentColor(record.paymentType),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       record.paymentType.label,
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   // 금액
                   Text(
                     numberFormat.format(record.amount),
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: Colors.blue[900],
                     ),
                   ),
                   if (record.memo != null && record.memo!.isNotEmpty) ...[
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Icon(
                       Icons.note,
-                      size: 14,
+                      size: 12,
                       color: Colors.grey[600],
                     ),
                   ],
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   // 수정/삭제 버튼
                   IconButton(
                     onPressed: onEdit,
                     icon: const Icon(Icons.edit),
-                    iconSize: 16,
+                    iconSize: 14,
                     color: Colors.blue[700],
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(2),
                     constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32,
+                      minWidth: 28,
+                      minHeight: 28,
                     ),
                   ),
                   IconButton(
                     onPressed: onDelete,
                     icon: const Icon(Icons.delete),
-                    iconSize: 16,
+                    iconSize: 14,
                     color: Colors.red[700],
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(2),
                     constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32,
+                      minWidth: 28,
+                      minHeight: 28,
                     ),
                   ),
                 ],

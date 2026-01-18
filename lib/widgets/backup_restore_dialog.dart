@@ -4,7 +4,7 @@ import '../services/backup_service.dart';
 
 class BackupRestoreDialog extends StatelessWidget {
   final VoidCallback onBackupComplete;
-  final VoidCallback onRestoreComplete;
+  final Future<void> Function() onRestoreComplete;
 
   const BackupRestoreDialog({
     super.key,
@@ -233,7 +233,7 @@ class BackupRestoreDialog extends StatelessWidget {
 
         if (restoreResult.success) {
           // 복원 완료 다이얼로그 표시
-          final shouldRefresh = await showDialog<bool>(
+          await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('복원 완료'),
@@ -252,13 +252,12 @@ class BackupRestoreDialog extends StatelessWidget {
             ),
           );
           
-          // 다이얼로그 닫은 후 콜백 호출하여 UI 업데이트
-          if (shouldRefresh == true && context.mounted) {
-            // 작은 딜레이 후 콜백 호출 (다이얼로그가 완전히 닫힌 후)
-            await Future.delayed(const Duration(milliseconds: 100));
-            if (context.mounted) {
+          // 다이얼로그를 닫은 후 콜백 호출하여 UI 업데이트
+          // WidgetsBinding을 사용하여 다음 프레임에서 콜백 실행
+          if (context.mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
               onRestoreComplete();
-            }
+            });
           }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(

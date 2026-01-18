@@ -89,13 +89,14 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "hairdress_history" "\0"
+            // NOTE: 아래 값들은 lib/constants/app_config.dart의 AppConfig 값과 동일하게 유지하세요.
+            VALUE "CompanyName", "반하다헤어" "\0"
+            VALUE "FileDescription", "반하다헤어" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "hairdress_history" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "hairdress_history.exe" "\0"
-            VALUE "ProductName", "hairdress_history" "\0"
+            VALUE "InternalName", "반하다헤어" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 반하다헤어. All rights reserved." "\0"
+            VALUE "OriginalFilename", "반하다헤어.exe" "\0"
+            VALUE "ProductName", "반하다헤어" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

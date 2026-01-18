@@ -1,11 +1,11 @@
 {
-    "name": "hairdress_history",
-    "short_name": "hairdress_history",
+    "name": "고객 관리",
+    "short_name": "고객 관리",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "반하다헤어 고객 관리 시스템",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,10 +1,12 @@
 # Project-level configuration.
+# NOTE: 앱 이름을 변경하려면 lib/constants/app_config.dart의 AppConfig.executableName도 함께 변경하세요.
 cmake_minimum_required(VERSION 3.14)
-project(hairdress_history LANGUAGES CXX)
+project(반하다헤어 LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "hairdress_history")
+# NOTE: 이 값은 lib/constants/app_config.dart의 AppConfig.executableName과 동일해야 합니다.
+set(BINARY_NAME "반하다헤어")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
