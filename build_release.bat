@@ -2,7 +2,7 @@
 REM Windows Release 빌드 스크립트
 
 echo ========================================
-echo 반하다헤어 Windows Release 빌드
+echo hairdress_history Windows Release 빌드
 echo ========================================
 echo.
 
@@ -26,10 +26,12 @@ echo ========================================
 echo build\windows\x64\runner\Release\
 echo.
 echo 배포 파일:
-echo   - 반하다헤어.exe
+echo   - hairdress_history.exe (빌드 후 생성됨)
 echo   - flutter_windows.dll
 echo   - data\ 폴더 (전체)
 echo   - 기타 DLL 파일들
+echo.
+echo 참고: 실행 파일 이름은 hairdress_history.exe로 생성됩니다.
 echo.
 echo ========================================
 echo 배포 방법:
