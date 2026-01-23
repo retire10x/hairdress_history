@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.hairdress_history"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36  // Android 최신 버전 호환 (플러그인 요구사항)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -25,7 +25,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36  // Android 최신 버전 호환
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

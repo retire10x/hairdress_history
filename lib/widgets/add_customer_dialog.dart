@@ -66,91 +66,141 @@ class _AddCustomerDialogState extends State<AddCustomerDialog> {
     return Dialog(
       child: Container(
         width: 500,
-        padding: const EdgeInsets.all(24),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.9,
+        ),
+        padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.customer == null ? '고객 추가' : '고객 수정',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // 이름
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: '이름 *',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+              // 제목과 버튼을 같은 행에 배치
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    widget.customer == null ? '고객 추가' : '고객 수정',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
                   ),
-                ),
-                style: const TextStyle(fontSize: 16),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '이름을 입력해주세요';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              // 전화번호
-              TextFormField(
-                controller: _phoneController,
-                inputFormatters: [_phoneMaskFormatter],
-                maxLength: 13, // 하이픈 포함 총 13자리 제한
-                decoration: const InputDecoration(
-                  labelText: '전화번호',
-                  hintText: '010-1234-5678',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close),
+                        tooltip: '취소',
+                        style: IconButton.styleFrom(
+                          padding: const EdgeInsets.all(8),
+                          minimumSize: const Size(36, 36),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        onPressed: _save,
+                        icon: const Icon(Icons.check),
+                        tooltip: '저장',
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.all(8),
+                          minimumSize: const Size(36, 36),
+                        ),
+                      ),
+                    ],
                   ),
-                  counterText: '', // 문자 카운터 숨김
-                ),
-                style: const TextStyle(fontSize: 16),
-                keyboardType: TextInputType.phone,
-                onChanged: (value) {
-                  // 입력이 비어있으면 기본값 '010-'으로 복원
-                  if (value.isEmpty) {
-                    _phoneController.text = '010-';
-                    _phoneController.selection = TextSelection.fromPosition(
-                      TextPosition(offset: '010-'.length),
-                    );
-                  }
-                  // 13자리가 넘으면 자동으로 잘라냄
-                  if (value.length > 13) {
-                    _phoneController.text = value.substring(0, 13);
-                    _phoneController.selection = TextSelection.fromPosition(
-                      TextPosition(offset: 13),
-                    );
-                  }
-                },
-                validator: (value) {
-                  if (value != null && value.isNotEmpty && value != '010-') {
-                    // 하이픈 포함 정확히 13자리인지 확인
-                    if (value.length != 13) {
-                      return '전화번호는 13자리여야 합니다 (010-1234-5678)';
-                    }
-                    // 형식 확인: 010-####-####
-                    final phoneRegex = RegExp(r'^010-\d{4}-\d{4}$');
-                    if (!phoneRegex.hasMatch(value)) {
-                      return '올바른 전화번호 형식이 아닙니다 (010-1234-5678)';
-                    }
-                  }
-                  return null;
-                },
+                ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+              // 이름과 전화번호를 한 줄에 배치
+              Row(
+                children: [
+                  // 이름 (좌측)
+                  Expanded(
+                    flex: 2,
+                    child: TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: '이름 *',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        isDense: true,
+                      ),
+                      style: const TextStyle(fontSize: 14),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return '이름을 입력해주세요';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // 전화번호 (우측)
+                  Expanded(
+                    flex: 2,
+                    child: TextFormField(
+                      controller: _phoneController,
+                      inputFormatters: [_phoneMaskFormatter],
+                      maxLength: 13, // 하이픈 포함 총 13자리 제한
+                      decoration: const InputDecoration(
+                        labelText: '전화번호',
+                        hintText: '010-1234-5678',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        counterText: '', // 문자 카운터 숨김
+                        isDense: true,
+                      ),
+                      style: const TextStyle(fontSize: 14),
+                      keyboardType: TextInputType.phone,
+                      onChanged: (value) {
+                        // 입력이 비어있으면 기본값 '010-'으로 복원
+                        if (value.isEmpty) {
+                          _phoneController.text = '010-';
+                          _phoneController.selection = TextSelection.fromPosition(
+                            TextPosition(offset: '010-'.length),
+                          );
+                        }
+                        // 13자리가 넘으면 자동으로 잘라냄
+                        if (value.length > 13) {
+                          _phoneController.text = value.substring(0, 13);
+                          _phoneController.selection = TextSelection.fromPosition(
+                            TextPosition(offset: 13),
+                          );
+                        }
+                      },
+                      validator: (value) {
+                        if (value != null && value.isNotEmpty && value != '010-') {
+                          // 하이픈 포함 정확히 13자리인지 확인
+                          if (value.length != 13) {
+                            return '전화번호는 13자리여야 합니다 (010-1234-5678)';
+                          }
+                          // 형식 확인: 010-####-####
+                          final phoneRegex = RegExp(r'^010-\d{4}-\d{4}$');
+                          if (!phoneRegex.hasMatch(value)) {
+                            return '올바른 전화번호 형식이 아닙니다 (010-1234-5678)';
+                          }
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               // 메모
               TextFormField(
                 controller: _memoController,
@@ -158,46 +208,16 @@ class _AddCustomerDialogState extends State<AddCustomerDialog> {
                   labelText: '메모',
                   border: OutlineInputBorder(),
                   contentPadding: EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
+                    horizontal: 12,
+                    vertical: 12,
                   ),
+                  isDense: true,
                 ),
-                style: const TextStyle(fontSize: 16),
-                maxLines: 3,
+                style: const TextStyle(fontSize: 14),
+                maxLines: 2,
               ),
-              const SizedBox(height: 24),
-              // 버튼
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      minimumSize: const Size(0, 50),
-                    ),
-                    child: const Text('취소'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                      minimumSize: const Size(0, 50),
-                    ),
-                    child: const Text('저장'),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

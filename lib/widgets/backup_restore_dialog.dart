@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'dart:io';
+import 'package:intl/intl.dart';
 import '../services/backup_service.dart';
 
 class BackupRestoreDialog extends StatelessWidget {
@@ -112,7 +114,48 @@ class BackupRestoreDialog extends StatelessWidget {
 
     try {
       final backupService = BackupService();
-      final filePath = await backupService.createBackup();
+      
+      // Android/iOS에서는 파일 저장 위치를 사용자가 선택하도록 함
+      String? savePath;
+      try {
+        // ignore: undefined_prefixed_name
+        if (Platform.isAndroid || Platform.isIOS) {
+          // Mobile: 파일 저장 위치 선택
+          final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+          final fileName = 'hairdress_backup_$timestamp.csv';
+          
+          // 파일 저장 위치 선택
+          savePath = await FilePicker.platform.saveFile(
+            dialogTitle: '백업 파일 저장 위치 선택',
+            fileName: fileName,
+            type: FileType.custom,
+            allowedExtensions: ['csv'],
+          );
+          
+          if (savePath == null) {
+            // 사용자가 취소한 경우
+            if (context.mounted) {
+              Navigator.of(context).pop(); // 진행 다이얼로그 닫기
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        debugPrint('File picker error: $e');
+      }
+      
+      // 백업 파일 생성
+      String filePath;
+      if (savePath != null) {
+        // 사용자가 선택한 위치에 저장 (Android/iOS)
+        final fileBytes = await backupService.createBackupData();
+        final file = File(savePath);
+        await file.writeAsBytes(fileBytes);
+        filePath = savePath;
+      } else {
+        // Desktop: 기존 방식 (자동 경로)
+        filePath = await backupService.createBackup();
+      }
 
       if (context.mounted) {
         Navigator.of(context).pop(); // 진행 다이얼로그 닫기

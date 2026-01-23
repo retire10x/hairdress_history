@@ -1,10 +1,15 @@
-import 'dart:io';
 import 'dart:math';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite_common/sqflite.dart';
-import 'package:path/path.dart' as path;
+import 'package:sqflite/sqflite.dart' as sqflite;
 import '../models/customer.dart';
 import '../models/service_record.dart';
+
+// 플랫폼별 import - 웹이 아닐 때만 import
+import 'dart:io' if (dart.library.html) 'dart:html';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart' if (dart.library.html) 'dart:html';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -15,10 +20,24 @@ class DatabaseHelper {
 
   static Future<void> _initializeDatabaseFactory() async {
     if (!_initialized) {
-      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-        // Desktop 플랫폼에서는 sqflite_common_ffi를 사용
-        sqfliteFfiInit();
-        databaseFactory = databaseFactoryFfi;
+      if (kIsWeb) {
+        // 웹 플랫폼에서는 기본 factory 사용 (sqflite 웹 구현)
+        // 웹에서는 sqflite가 IndexedDB를 사용
+        _initialized = true;
+        return;
+      }
+      
+      // Desktop 플랫폼(Windows, Linux, macOS)에서만 sqflite_common_ffi를 사용
+      // Android/iOS는 네이티브 SQLite를 사용하므로 sqflite_common_ffi 불필요
+      if (!kIsWeb) {
+        // ignore: undefined_prefixed_name
+        if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+          // ignore: undefined_prefixed_name
+          sqfliteFfiInit();
+          // ignore: undefined_prefixed_name
+          databaseFactory = databaseFactoryFfi;
+        }
+        // Android/iOS는 기본 sqflite 사용 (네이티브 SQLite)
       }
       _initialized = true;
     }
@@ -33,45 +52,95 @@ class DatabaseHelper {
 
   Future<Database> _initDB(String filePath) async {
     String dbPath;
-    if (Platform.isWindows) {
-      // Windows에서는 사용자 문서 폴더 사용
-      final userProfile = Platform.environment['USERPROFILE'] ?? '';
-      final documentsPath = path.join(userProfile, 'Documents', 'HairdressHistory');
-      // 디렉토리가 없으면 생성
-      final dir = Directory(documentsPath);
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
-      dbPath = path.join(documentsPath, filePath);
-    } else if (Platform.isLinux || Platform.isMacOS) {
-      // Linux/MacOS에서는 홈 디렉토리 사용
-      final homeDir = Platform.environment['HOME'] ?? '';
-      final appDataPath = path.join(homeDir, '.hairdress_history');
-      final dir = Directory(appDataPath);
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
-      dbPath = path.join(appDataPath, filePath);
+    
+    if (kIsWeb) {
+      // 웹 플랫폼에서는 파일명만 사용 (IndexedDB에 저장됨)
+      dbPath = filePath;
     } else {
-      // Mobile 플랫폼에서는 sqflite의 기본 경로 사용
-      // 하지만 sqflite_common_ffi를 사용하므로 직접 경로 지정
-      final currentDir = Directory.current.path;
-      dbPath = path.join(currentDir, filePath);
+      // 웹이 아닌 경우에만 Platform 사용 (kIsWeb 체크로 보호됨)
+      // ignore: undefined_prefixed_name
+      if (Platform.isWindows) {
+        // Windows에서는 사용자 문서 폴더의 hairdress_history 폴더 사용
+        // ignore: undefined_prefixed_name
+        final userProfile = Platform.environment['USERPROFILE'] ?? '';
+        final documentsPath = path.join(userProfile, 'Documents', 'hairdress_history');
+        // 디렉토리가 없으면 생성
+        // ignore: undefined_prefixed_name
+        final dir = Directory(documentsPath);
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
+        dbPath = path.join(documentsPath, filePath);
+        // ignore: undefined_prefixed_name
+      } else if (Platform.isLinux || Platform.isMacOS) {
+        // Linux/MacOS에서는 홈 디렉토리의 hairdress_history 폴더 사용
+        // ignore: undefined_prefixed_name
+        final homeDir = Platform.environment['HOME'] ?? '';
+        final appDataPath = path.join(homeDir, 'hairdress_history');
+        // ignore: undefined_prefixed_name
+        final dir = Directory(appDataPath);
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
+        dbPath = path.join(appDataPath, filePath);
+      } else {
+        // Android/iOS Mobile 플랫폼에서는 sqflite의 getDatabasesPath()를 사용
+        // Android에서는 앱의 데이터베이스 디렉토리를 사용해야 함
+        try {
+          // Android/iOS에서는 sqflite의 getDatabasesPath()를 사용
+          if (!kIsWeb) {
+            // ignore: undefined_prefixed_name
+            if (Platform.isAndroid || Platform.isIOS) {
+              // sqflite 패키지의 getDatabasesPath() 사용
+              final databasesPath = await sqflite.getDatabasesPath();
+              dbPath = path.join(databasesPath, filePath);
+            } else {
+              // 기타 모바일 플랫폼 (폴백)
+              final appDir = await getApplicationDocumentsDirectory();
+              final dir = Directory(appDir.path);
+              if (!await dir.exists()) {
+                await dir.create(recursive: true);
+              }
+              dbPath = path.join(appDir.path, filePath);
+            }
+          } else {
+            // 웹은 이미 처리됨
+            dbPath = filePath;
+          }
+        } catch (e) {
+          debugPrint('경로 가져오기 실패: $e');
+          // 폴백: 상대 경로 사용 (sqflite가 자동으로 처리)
+          dbPath = filePath;
+        }
+      }
     }
 
-    final db = await openDatabase(
-      dbPath,
-      version: 1,
-      onCreate: _createDB,
-    );
-    
-    // FOREIGN KEY 활성화 (SQLite는 기본적으로 비활성화)
-    await db.execute('PRAGMA foreign_keys = ON');
-    
-    // 테이블 존재 여부 확인 및 자동 생성
-    await _ensureTablesExist(db);
-    
-    return db;
+    try {
+      debugPrint('DB 경로: $dbPath');
+      final db = await openDatabase(
+        dbPath,
+        version: 1,
+        onCreate: _createDB,
+      );
+      
+      // FOREIGN KEY 활성화 (SQLite는 기본적으로 비활성화)
+      // 웹에서는 PRAGMA가 작동하지 않을 수 있으므로 try-catch로 처리
+      try {
+        await db.execute('PRAGMA foreign_keys = ON');
+      } catch (e) {
+        debugPrint('PRAGMA foreign_keys 설정 실패 (웹 환경일 수 있음): $e');
+      }
+      
+      // 테이블 존재 여부 확인 및 자동 생성
+      await _ensureTablesExist(db);
+      
+      return db;
+    } catch (e, stackTrace) {
+      debugPrint('DB 열기 실패: $e');
+      debugPrint('DB 경로: $dbPath');
+      debugPrint('스택 트레이스: $stackTrace');
+      rethrow;
+    }
   }
 
   /// 테이블이 존재하는지 확인하고 없으면 생성
@@ -239,8 +308,23 @@ class DatabaseHelper {
       query = 'SELECT * FROM customers ORDER BY name ASC';
     }
     
-    final result = await db.rawQuery(query);
-    return result.map((map) => Customer.fromMap(map)).toList();
+    try {
+      final result = await db.rawQuery(query);
+      return result.map((map) {
+        try {
+          return Customer.fromMap(map);
+        } catch (e) {
+          debugPrint('고객 데이터 파싱 오류: $e');
+          debugPrint('데이터: $map');
+          rethrow;
+        }
+      }).toList();
+    } catch (e, stackTrace) {
+      debugPrint('고객 목록 조회 오류: $e');
+      debugPrint('쿼리: $query');
+      debugPrint('스택 트레이스: $stackTrace');
+      rethrow;
+    }
   }
 
   /// 고객별 총 서비스 금액 계산
@@ -317,6 +401,26 @@ class DatabaseHelper {
       orderBy: 'service_date DESC',
     );
     return result.map((map) => ServiceRecord.fromMap(map)).toList();
+  }
+
+  /// 특정 날짜에 서비스 기록이 있는 고객 ID 목록을 반환합니다
+  Future<List<int>> getCustomerIdsByServiceDate(DateTime date) async {
+    final db = await database;
+    // 날짜만 비교 (시간 제외)
+    // ISO8601 형식: YYYY-MM-DD
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    
+    // SQLite의 DATE 함수 대신 문자열 비교 사용 (더 호환성 있음)
+    // service_date는 ISO8601 형식으로 저장되어 있으므로 날짜 부분만 비교
+    final result = await db.rawQuery(
+      '''
+      SELECT DISTINCT customer_id
+      FROM service_records
+      WHERE SUBSTR(service_date, 1, 10) = ?
+      ''',
+      [dateStr],
+    );
+    return result.map((row) => row['customer_id'] as int).toList();
   }
 
   Future<int> updateServiceRecord(ServiceRecord record) async {

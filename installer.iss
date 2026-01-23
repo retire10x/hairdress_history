@@ -24,9 +24,9 @@ DisableProgramGroupPage=no
 DisableReadyPage=no
 DisableWelcomePage=no
 
-; 아이콘 설정 (선택사항)
-; SetupIconFile=windows\runner\resources\app_icon.ico
-; UninstallDisplayIcon={app}\반하다헤어.exe
+; 아이콘 설정
+SetupIconFile=assets\icon.ico
+UninstallDisplayIcon={app}\반하다헤어.exe
 
 [Languages]
 Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"

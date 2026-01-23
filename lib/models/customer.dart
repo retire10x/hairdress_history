@@ -24,12 +24,25 @@ class Customer {
   }
 
   factory Customer.fromMap(Map<String, dynamic> map) {
+    // SQLite는 컬럼 이름을 소문자로 반환할 수 있으므로 대소문자 구분 없이 처리
+    final createdAtStr = map['created_at'] ?? map['created_At'] ?? map['CREATED_AT'];
+    if (createdAtStr == null) {
+      throw Exception('created_at 필드가 없습니다. 데이터: $map');
+    }
+    
+    DateTime createdAt;
+    try {
+      createdAt = DateTime.parse(createdAtStr.toString());
+    } catch (e) {
+      throw Exception('created_at 파싱 실패: $createdAtStr, 오류: $e');
+    }
+    
     return Customer(
       id: map['id'] as int?,
-      name: map['name'] as String,
-      phone: map['phone'] as String?,
-      memo: map['memo'] as String?,
-      createdAt: DateTime.parse(map['created_at'] as String),
+      name: map['name'] as String? ?? map['Name'] as String? ?? '',
+      phone: map['phone'] as String? ?? map['Phone'] as String?,
+      memo: map['memo'] as String? ?? map['Memo'] as String?,
+      createdAt: createdAt,
     );
   }
 

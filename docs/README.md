@@ -10,6 +10,9 @@
 - **[APP_TITLE_FILE_GUIDE.md](APP_TITLE_FILE_GUIDE.md)** - AppBar 제목 외부 파일 설정 가이드
 - **[CHANGE_APP_NAME.md](CHANGE_APP_NAME.md)** - 앱 이름 변경 가이드
 - **[CMAKE_FIX_README.md](CMAKE_FIX_README.md)** - CMake 한글 이름 문제 해결
+- **[HAIRDRESS_HISTORY_FOLDER_GUIDE.md](HAIRDRESS_HISTORY_FOLDER_GUIDE.md)** - hairdress_history 폴더 위치 및 사용 가이드
+- **[ANDROID_APP_TITLE_GUIDE.md](ANDROID_APP_TITLE_GUIDE.md)** - Android에서 app_title.txt 사용 가이드
+- **[ANDROID_FILE_ACCESS_GUIDE.md](ANDROID_FILE_ACCESS_GUIDE.md)** - Android 파일 접근 가이드 (Scoped Storage 대응)
 
 ### 배포 가이드
 - **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Windows 배포 가이드

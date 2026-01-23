@@ -6,17 +6,20 @@ AppBar 제목을 외부 txt 파일에서 읽어오도록 설정했습니다. 이
 
 ### Windows
 ```
-[실행 파일 경로]/app_title.txt
+C:\Users\[사용자명]\Documents\hairdress_history\app_title.txt
 ```
-
-예시:
-- 개발 환경: `D:\develop\hairdress_history\build\windows\x64\runner\Release\app_title.txt`
-- 설치 후: `C:\Program Files\hairdress_history\app_title.txt`
 
 ### Linux/MacOS
 ```
-[실행 파일 경로]/app_title.txt
+~/hairdress_history/app_title.txt
 ```
+
+### Android
+```
+/storage/emulated/0/hairdress_history/app_title.txt
+```
+
+**참고**: 모든 플랫폼에서 `hairdress_history` 폴더를 사용합니다. 자세한 내용은 [HAIRDRESS_HISTORY_FOLDER_GUIDE.md](HAIRDRESS_HISTORY_FOLDER_GUIDE.md)를 참고하세요.
 
 ## 📝 파일 형식
 
@@ -37,9 +40,11 @@ AppBar 제목을 외부 txt 파일에서 읽어오도록 설정했습니다. 이
 
 ### 1. 파일 생성
 
-1. 실행 파일(`hairdress_history.exe`)과 **같은 폴더**에 `app_title.txt` 파일을 생성합니다.
-2. 파일에 원하는 제목을 입력합니다 (한 줄만).
-3. 파일을 **UTF-8 인코딩**으로 저장합니다.
+1. **Windows**: `C:\Users\[사용자명]\Documents\hairdress_history\` 폴더에 `app_title.txt` 파일을 생성합니다.
+2. **Linux/MacOS**: `~/hairdress_history/` 폴더에 `app_title.txt` 파일을 생성합니다.
+3. **Android**: `/storage/emulated/0/hairdress_history/` 폴더에 `app_title.txt` 파일을 생성합니다.
+4. 파일에 원하는 제목을 입력합니다 (한 줄만).
+5. 파일을 **UTF-8 인코딩**으로 저장합니다.
 
 ### 2. 파일이 없는 경우
 

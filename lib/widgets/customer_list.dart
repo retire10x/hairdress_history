@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/customer.dart';
+import '../database/database_helper.dart';
 
 enum SortType {
   name('이름'),
@@ -18,7 +20,7 @@ enum SortOrder {
   final String label;
 }
 
-class CustomerList extends StatelessWidget {
+class CustomerList extends StatefulWidget {
   final List<Customer> customers;
   final Customer? selectedCustomer;
   final Function(Customer) onCustomerSelected;
@@ -43,6 +45,96 @@ class CustomerList extends StatelessWidget {
   });
 
   @override
+  State<CustomerList> createState() => _CustomerListState();
+}
+
+class _CustomerListState extends State<CustomerList> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  final DatabaseHelper _db = DatabaseHelper.instance;
+  List<int>? _serviceDateCustomerIds; // 날짜 검색 시 사용할 고객 ID 목록
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// 검색어가 날짜 형식인지 확인하고 DateTime으로 변환
+  DateTime? _parseDate(String query) {
+    // 다양한 날짜 형식 시도
+    final dateFormats = [
+      'yyyy-MM-dd',
+      'yyyyMMdd',
+      'yyyy/MM/dd',
+      'yyyy.MM.dd',
+      'MM-dd',
+      'MM/dd',
+      'MMdd',
+    ];
+
+    for (final format in dateFormats) {
+      try {
+        final date = DateFormat(format).parse(query);
+        // 연도가 없으면 현재 연도 사용
+        if (!format.contains('yyyy')) {
+          final now = DateTime.now();
+          return DateTime(now.year, date.month, date.day);
+        }
+        return date;
+      } catch (e) {
+        // 다음 형식 시도
+        continue;
+      }
+    }
+    return null;
+  }
+
+  /// 날짜 검색을 위한 고객 ID 목록 로드
+  Future<void> _loadServiceDateCustomerIds(DateTime date) async {
+    try {
+      final ids = await _db.getCustomerIdsByServiceDate(date);
+      if (mounted) {
+        setState(() {
+          _serviceDateCustomerIds = ids;
+        });
+      }
+    } catch (e) {
+      debugPrint('서비스일 검색 오류: $e');
+      if (mounted) {
+        setState(() {
+          _serviceDateCustomerIds = [];
+        });
+      }
+    }
+  }
+
+  List<Customer> get _filteredCustomers {
+    if (_searchQuery.isEmpty) {
+      return widget.customers;
+    }
+
+    final query = _searchQuery.trim();
+    
+    // 날짜 형식인지 확인
+    final date = _parseDate(query);
+    if (date != null && _serviceDateCustomerIds != null) {
+      // 날짜 검색: 해당 날짜에 서비스 기록이 있는 고객만 필터링
+      return widget.customers.where((customer) {
+        return customer.id != null && _serviceDateCustomerIds!.contains(customer.id!);
+      }).toList();
+    }
+
+    // 이름/전화번호 검색
+    final queryLower = query.toLowerCase();
+    return widget.customers.where((customer) {
+      final name = customer.name.toLowerCase();
+      final phone = customer.phone?.toLowerCase() ?? '';
+      return name.contains(queryLower) || phone.contains(queryLower);
+    }).toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.grey[100],
@@ -50,7 +142,7 @@ class CustomerList extends StatelessWidget {
         children: [
           // 헤더
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.blue[50],
               border: Border(
@@ -65,29 +157,78 @@ class CustomerList extends StatelessWidget {
                     const Text(
                       '고객 목록',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.blue,
                       ),
                     ),
                     ElevatedButton.icon(
-                      onPressed: onAddCustomer,
+                      onPressed: widget.onAddCustomer,
                       icon: const Icon(Icons.add, size: 16),
                       label: const Text('추가', style: TextStyle(fontSize: 12)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
+                          horizontal: 6,
+                          vertical: 2,
                         ),
-                        minimumSize: const Size(0, 28),
+                        minimumSize: const Size(0, 24),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 2),
+                // 검색창
+                Container(
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 11, height: 1.0),
+                    decoration: InputDecoration(
+                      hintText: '이름/전화번호/서비스일 검색',
+                      hintStyle: TextStyle(fontSize: 10, color: Colors.grey[500]),
+                      prefixIcon: const Icon(Icons.search, size: 12, color: Colors.grey),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? GestureDetector(
+                              onTap: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                              },
+                              child: const Icon(Icons.clear, size: 12, color: Colors.grey),
+                            )
+                          : null,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                    onChanged: (value) async {
+                      setState(() {
+                        _searchQuery = value;
+                        // 날짜 검색이 아닌 경우 고객 ID 목록 초기화
+                        final date = _parseDate(value.trim());
+                        if (date == null) {
+                          _serviceDateCustomerIds = null;
+                        } else {
+                          // 날짜 검색인 경우 고객 ID 목록 로드
+                          _loadServiceDateCustomerIds(date);
+                        }
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 2),
                 // 정렬 옵션
                 Wrap(
                   spacing: 4,
@@ -103,15 +244,18 @@ class CustomerList extends StatelessWidget {
                     ),
                     // 정렬 타입 선택
                     ...SortType.values.map((type) {
-                      final isSelected = sortType == type;
+                      final isSelected = widget.sortType == type;
                       return SizedBox(
-                        height: 28,
+                        height: 24,
                         child: ChoiceChip(
-                          label: Text(type.label),
+                          label: Text(
+                            type.label,
+                            textAlign: TextAlign.center,
+                          ),
                           selected: isSelected,
                           onSelected: (selected) {
                             if (selected) {
-                              onSortChanged(type, sortOrder);
+                              widget.onSortChanged(type, widget.sortOrder);
                             }
                           },
                           selectedColor: Colors.blue[200],
@@ -119,35 +263,39 @@ class CustomerList extends StatelessWidget {
                             fontSize: 12,
                             color: isSelected ? Colors.blue[900] : Colors.grey[700],
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            height: 1.2,
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           visualDensity: VisualDensity.compact,
                           showCheckmark: false,
+                          labelPadding: EdgeInsets.zero,
                         ),
                       );
                     }),
                     // 정렬 순서 선택
                     SizedBox(
-                      height: 28,
+                      height: 24,
                       child: TextButton(
                         onPressed: () {
-                          final newOrder = sortOrder == SortOrder.asc
+                          final newOrder = widget.sortOrder == SortOrder.asc
                               ? SortOrder.desc
                               : SortOrder.asc;
-                          onSortChanged(sortType, newOrder);
+                          widget.onSortChanged(widget.sortType, newOrder);
                         },
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                          minimumSize: const Size(0, 28),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          minimumSize: const Size(0, 24),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                         child: Text(
-                          sortOrder == SortOrder.asc ? '↑' : '↓',
+                          widget.sortOrder == SortOrder.asc ? '↑' : '↓',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
+                            height: 1.2,
                           ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
@@ -158,7 +306,7 @@ class CustomerList extends StatelessWidget {
           ),
           // 고객 리스트
           Expanded(
-            child: customers.isEmpty
+            child: widget.customers.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -187,22 +335,32 @@ class CustomerList extends StatelessWidget {
                       ],
                     ),
                   )
-                : ListView.builder(
-                    itemCount: customers.length,
-                    itemBuilder: (context, index) {
-                      final customer = customers[index];
-                      final isSelected = selectedCustomer?.id == customer.id;
+                : _filteredCustomers.isEmpty
+                    ? Center(
+                        child: Text(
+                          '검색 결과가 없습니다',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _filteredCustomers.length,
+                        itemBuilder: (context, index) {
+                          final customer = _filteredCustomers[index];
+                          final isSelected = widget.selectedCustomer?.id == customer.id;
 
                       return InkWell(
-                        onTap: () => onCustomerSelected(customer),
+                        onTap: () => widget.onCustomerSelected(customer),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
+                            horizontal: 4,
+                            vertical: 1,
                           ),
                           margin: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
+                            horizontal: 1,
+                            vertical: 0,
                           ),
                           decoration: BoxDecoration(
                             color: isSelected ? Colors.blue[100] : Colors.white,
@@ -231,7 +389,7 @@ class CustomerList extends StatelessWidget {
                                     ),
                                     if (customer.phone != null &&
                                         customer.phone!.isNotEmpty) ...[
-                                      const SizedBox(width: 6),
+                                      const SizedBox(width: 3),
                                       Text(
                                         '• ${customer.phone!}',
                                         style: TextStyle(
@@ -245,25 +403,25 @@ class CustomerList extends StatelessWidget {
                               ),
                               // 수정/삭제 버튼
                               IconButton(
-                                onPressed: () => onEditCustomer(customer),
+                                onPressed: () => widget.onEditCustomer(customer),
                                 icon: const Icon(Icons.edit),
-                                iconSize: 18,
+                                iconSize: 16,
                                 color: Colors.blue[700],
-                                padding: const EdgeInsets.all(4),
+                                padding: const EdgeInsets.all(1),
                                 constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
+                                  minWidth: 24,
+                                  minHeight: 24,
                                 ),
                               ),
                               IconButton(
-                                onPressed: () => onDeleteCustomer(customer),
+                                onPressed: () => widget.onDeleteCustomer(customer),
                                 icon: const Icon(Icons.delete),
-                                iconSize: 18,
+                                iconSize: 16,
                                 color: Colors.red[700],
-                                padding: const EdgeInsets.all(4),
+                                padding: const EdgeInsets.all(1),
                                 constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
+                                  minWidth: 24,
+                                  minHeight: 24,
                                 ),
                               ),
                             ],

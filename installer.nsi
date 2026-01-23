@@ -11,6 +11,10 @@ InstallDir "$PROGRAMFILES\반하다헤어"
 RequestExecutionLevel admin
 Unicode true  ; 한글 지원
 
+; 아이콘 설정
+Icon "assets\icon.ico"
+UninstallIcon "assets\icon.ico"
+
 ; ============================================
 ; 설치 페이지 설정
 ; ============================================

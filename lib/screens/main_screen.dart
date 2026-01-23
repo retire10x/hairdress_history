@@ -607,15 +607,22 @@ class _MainScreenState extends State<MainScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(_appTitle),
+        toolbarHeight: 40,
+        titleSpacing: 16,
+        actionsIconTheme: const IconThemeData(size: 18),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_sweep),
+            icon: const Icon(Icons.delete_sweep, size: 18),
             tooltip: '데이터 초기화',
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             onPressed: _clearAllData,
           ),
           IconButton(
-            icon: const Icon(Icons.backup),
+            icon: const Icon(Icons.backup, size: 18),
             tooltip: '백업/복원',
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             onPressed: _showBackupRestoreDialog,
           ),
         ],

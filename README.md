@@ -69,13 +69,20 @@ build_installer.bat
 
 **Windows:**
 ```
-C:\Users\[사용자명]\Documents\HairdressHistory\hairdress_history.db
+C:\Users\[사용자명]\Documents\hairdress_history\hairdress_history.db
 ```
 
 **백업 파일 위치:**
 ```
-C:\Users\[사용자명]\Documents\HairdressHistory\backups\hairdress_backup_*.csv
+C:\Users\[사용자명]\Documents\hairdress_history\backups\hairdress_backup_*.csv
 ```
+
+**app_title.txt 위치:**
+```
+C:\Users\[사용자명]\Documents\hairdress_history\app_title.txt
+```
+
+자세한 내용: [docs/HAIRDRESS_HISTORY_FOLDER_GUIDE.md](docs/HAIRDRESS_HISTORY_FOLDER_GUIDE.md)
 
 ### 데이터베이스 구조
 
@@ -149,11 +156,13 @@ flutter build windows --release
 
 ### 2. 외부 제목 설정
 AppBar 제목을 외부 txt 파일(`app_title.txt`)에서 읽어옵니다:
-- 실행 파일과 같은 폴더에 `app_title.txt` 파일 생성
+- `Documents/hairdress_history/app_title.txt` (Windows)
+- `~/hairdress_history/app_title.txt` (Linux/MacOS)
+- `/storage/emulated/0/hairdress_history/app_title.txt` (Android)
 - 파일 내용이 AppBar 제목으로 표시됨
 - 파일이 없으면 기본값(`hairdress_history`) 사용
 
-자세한 내용: [docs/APP_TITLE_FILE_GUIDE.md](docs/APP_TITLE_FILE_GUIDE.md)
+자세한 내용: [docs/APP_TITLE_FILE_GUIDE.md](docs/APP_TITLE_FILE_GUIDE.md), [docs/HAIRDRESS_HISTORY_FOLDER_GUIDE.md](docs/HAIRDRESS_HISTORY_FOLDER_GUIDE.md)
 
 ### 3. MSSQL 마이그레이션 지원
 기존 MSSQL Server 데이터를 CSV 파일로 추출하여 Flutter 앱으로 마이그레이션할 수 있습니다.

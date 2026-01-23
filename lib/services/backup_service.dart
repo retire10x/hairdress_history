@@ -4,6 +4,8 @@ import 'package:csv/csv.dart';
 import 'package:path/path.dart' as path;
 import 'package:intl/intl.dart';
 import 'package:charset_converter/charset_converter.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 import '../database/database_helper.dart';
 import '../models/customer.dart';
 import '../models/service_record.dart';
@@ -11,91 +13,147 @@ import '../models/service_record.dart';
 class BackupService {
   final DatabaseHelper _db = DatabaseHelper.instance;
 
+  /// 백업 데이터 생성 (CSV 바이트 배열)
+  /// 반환: UTF-8 BOM이 포함된 CSV 바이트 배열
+  /// Android/iOS에서 사용자가 선택한 위치에 저장할 때 사용
+  Future<List<int>> createBackupData() async {
+    // 고객 데이터 가져오기
+    final customers = await _db.getAllCustomers();
+    
+    // 서비스 기록 가져오기
+    final allRecords = <ServiceRecord>[];
+    for (final customer in customers) {
+      if (customer.id != null) {
+        final records = await _db.getServiceRecordsByCustomer(customer.id!);
+        allRecords.addAll(records);
+      }
+    }
+
+    // CSV 데이터 생성
+    final csvData = <List<String>>[];
+    
+    // 헤더 행 (CUSTOMER)
+    csvData.add(['TYPE', 'id', 'name', 'phone', 'memo', 'created_at']);
+    
+    // 고객 데이터
+    for (final customer in customers) {
+      csvData.add([
+        'CUSTOMER',
+        customer.id?.toString() ?? '',
+        customer.name,
+        customer.phone ?? '',
+        customer.memo ?? '',
+        customer.createdAt.toIso8601String(),
+      ]);
+    }
+    
+    // 헤더 행 (SERVICE_RECORD)
+    csvData.add(['TYPE', 'id', 'customer_id', 'service_date', 'service_content', 
+                 'product_name', 'payment_type', 'amount', 'memo', 'created_at']);
+    
+    // 서비스 기록 데이터
+    for (final record in allRecords) {
+      csvData.add([
+        'SERVICE_RECORD',
+        record.id?.toString() ?? '',
+        record.customerId.toString(),
+        record.serviceDate.toIso8601String(),
+        record.serviceContent,
+        record.productName ?? '',
+        record.paymentType.name,
+        record.amount.toString(),
+        record.memo ?? '',
+        record.createdAt.toIso8601String(),
+      ]);
+    }
+
+    // CSV 문자열 생성
+    final csvString = const ListToCsvConverter().convert(csvData);
+    
+    // UTF-8 BOM 추가
+    final bom = utf8.encode('\uFEFF');
+    final csvBytes = utf8.encode(csvString);
+    final fileBytes = [...bom, ...csvBytes];
+    
+    return fileBytes;
+  }
+
   /// 백업 파일 생성 (CSV 형식)
   /// 반환: 생성된 파일 경로
   Future<String> createBackup() async {
     try {
-      // 고객 데이터 가져오기
-      final customers = await _db.getAllCustomers();
-      
-      // 서비스 기록 가져오기
-      final allRecords = <ServiceRecord>[];
-      for (final customer in customers) {
-        if (customer.id != null) {
-          final records = await _db.getServiceRecordsByCustomer(customer.id!);
-          allRecords.addAll(records);
-        }
-      }
-
-      // CSV 데이터 생성
-      final csvData = <List<String>>[];
-      
-      // 헤더 행 (CUSTOMER)
-      csvData.add(['TYPE', 'id', 'name', 'phone', 'memo', 'created_at']);
-      
-      // 고객 데이터
-      for (final customer in customers) {
-        csvData.add([
-          'CUSTOMER',
-          customer.id?.toString() ?? '',
-          customer.name,
-          customer.phone ?? '',
-          customer.memo ?? '',
-          customer.createdAt.toIso8601String(),
-        ]);
-      }
-      
-      // 헤더 행 (SERVICE_RECORD)
-      csvData.add(['TYPE', 'id', 'customer_id', 'service_date', 'service_content', 
-                   'product_name', 'payment_type', 'amount', 'memo', 'created_at']);
-      
-      // 서비스 기록 데이터
-      for (final record in allRecords) {
-        csvData.add([
-          'SERVICE_RECORD',
-          record.id?.toString() ?? '',
-          record.customerId.toString(),
-          record.serviceDate.toIso8601String(),
-          record.serviceContent,
-          record.productName ?? '',
-          record.paymentType.name,
-          record.amount.toString(),
-          record.memo ?? '',
-          record.createdAt.toIso8601String(),
-        ]);
-      }
-
-      // CSV 문자열 생성
-      final csvString = const ListToCsvConverter().convert(csvData);
+      // 백업 데이터 생성
+      final fileBytes = await createBackupData();
 
       // 백업 파일 경로 생성
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final fileName = 'hairdress_backup_$timestamp.csv';
       
       String backupDir;
-      if (Platform.isWindows) {
+      if (kIsWeb) {
+        // 웹에서는 다운로드 폴더 사용 불가, 임시 경로 사용
+        backupDir = '';
+      } else if (Platform.isWindows) {
         final userProfile = Platform.environment['USERPROFILE'] ?? '';
-        backupDir = path.join(userProfile, 'Documents', 'HairdressHistory', 'backups');
+        backupDir = path.join(userProfile, 'Documents', 'hairdress_history', 'backups');
       } else if (Platform.isLinux || Platform.isMacOS) {
         final homeDir = Platform.environment['HOME'] ?? '';
-        backupDir = path.join(homeDir, '.hairdress_history', 'backups');
+        backupDir = path.join(homeDir, 'hairdress_history', 'backups');
       } else {
-        backupDir = Directory.current.path;
+        // Android/iOS: 공개 디렉토리 우선 사용 (사용자가 파일 관리자에서 접근 가능)
+        // 1순위: 다운로드 폴더 (사용자가 가장 쉽게 접근 가능)
+        // 참고: 백업은 FilePicker를 사용하므로 이 경로는 자동 백업 시에만 사용됨
+        try {
+          final downloadsDir = await getDownloadsDirectory();
+          if (downloadsDir != null) {
+            backupDir = path.join(downloadsDir.path, 'hairdress_history', 'backups');
+          } else {
+            // 다운로드 폴더를 사용할 수 없으면 앱의 외부 저장소 디렉토리 사용
+            final externalDir = await getExternalStorageDirectory();
+            if (externalDir != null) {
+              backupDir = path.join(externalDir.path, 'hairdress_history', 'backups');
+            } else {
+              // 외부 저장소를 사용할 수 없으면 앱의 문서 디렉토리 사용
+              final appDir = await getApplicationDocumentsDirectory();
+              backupDir = path.join(appDir.path, 'hairdress_history', 'backups');
+            }
+          }
+        } catch (e) {
+          // path_provider 실패 시 앱의 문서 디렉토리 사용
+          try {
+            final appDir = await getApplicationDocumentsDirectory();
+            backupDir = path.join(appDir.path, 'hairdress_history', 'backups');
+          } catch (e2) {
+            // 모든 방법 실패 시 임시 디렉토리 사용
+            try {
+              final tempDir = await getTemporaryDirectory();
+              backupDir = path.join(tempDir.path, 'hairdress_history', 'backups');
+            } catch (e3) {
+              backupDir = '';
+            }
+          }
+        }
       }
 
       // 디렉토리 생성
-      final dir = Directory(backupDir);
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
+      if (backupDir.isNotEmpty) {
+        final dir = Directory(backupDir);
+        if (!await dir.exists()) {
+          await dir.create(recursive: true);
+        }
       }
 
-      // 파일 저장 (UTF-8 BOM 추가로 Excel 등에서도 한글 깨짐 방지)
-      final filePath = path.join(backupDir, fileName);
+      // 파일 저장
+      String filePath;
+      if (kIsWeb || backupDir.isEmpty) {
+        // 웹이나 경로를 얻을 수 없는 경우 임시 파일로 저장
+        final tempDir = await getTemporaryDirectory();
+        filePath = path.join(tempDir.path, fileName);
+      } else {
+        filePath = path.join(backupDir, fileName);
+      }
+      
       final file = File(filePath);
-      // UTF-8 BOM 추가
-      final bom = utf8.encode('\uFEFF');
-      final csvBytes = utf8.encode(csvString);
-      final fileBytes = [...bom, ...csvBytes];
       await file.writeAsBytes(fileBytes);
 
       return filePath;
@@ -136,23 +194,46 @@ class BackupService {
             // UTF-8 실패
           }
           
-          // 2. UTF-8 실패 시 CP949 (Windows-949) 시도
+          // 2. UTF-8 실패 시 CP949 (Windows-949) 시도 (Android에서는 charset_converter가 작동하지 않을 수 있음)
           if (!decoded) {
             try {
-              final converted = await CharsetConverter.decode('Windows-949', bytes);
-              csvString = converted;
-              decoded = true;
+              // Android에서는 charset_converter가 작동하지 않을 수 있으므로 try-catch로 처리
+              if (!kIsWeb) {
+                // ignore: undefined_prefixed_name
+                if (Platform.isAndroid || Platform.isIOS) {
+                  // Android/iOS에서는 charset_converter를 사용하지 않고 UTF-8만 시도
+                  // 인코딩 문제가 있으면 사용자가 UTF-8로 저장하도록 안내
+                } else {
+                  final converted = await CharsetConverter.decode('Windows-949', bytes);
+                  csvString = converted;
+                  decoded = true;
+                }
+              } else {
+                final converted = await CharsetConverter.decode('Windows-949', bytes);
+                csvString = converted;
+                decoded = true;
+              }
             } catch (e) {
               // CP949 실패
             }
           }
           
-          // 3. CP949도 실패하면 EUC-KR 시도
+          // 3. CP949도 실패하면 EUC-KR 시도 (Android에서는 제외)
           if (!decoded) {
             try {
-              final converted = await CharsetConverter.decode('EUC-KR', bytes);
-              csvString = converted;
-              decoded = true;
+              // Android/iOS에서는 charset_converter를 사용하지 않음
+              if (!kIsWeb) {
+                // ignore: undefined_prefixed_name
+                if (!Platform.isAndroid && !Platform.isIOS) {
+                  final converted = await CharsetConverter.decode('EUC-KR', bytes);
+                  csvString = converted;
+                  decoded = true;
+                }
+              } else {
+                final converted = await CharsetConverter.decode('EUC-KR', bytes);
+                csvString = converted;
+                decoded = true;
+              }
             } catch (e) {
               // EUC-KR 실패
             }
