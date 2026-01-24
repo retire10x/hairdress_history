@@ -15,9 +15,9 @@ GO
 -- 통합 CSV 파일 생성 (고객 + 서비스 기록)
 SELECT 
     'CUSTOMER' AS TYPE,
-    CAST(Id AS VARCHAR) AS id,
-    Name AS name,
-    ISNULL(Phone, '') AS phone,
+    CAST(Customer_Id AS VARCHAR) AS id,
+    Customer_Name AS name,
+    ISNULL(Customer_Phone, '') AS phone,
     '' AS memo,
     CONVERT(VARCHAR, GETDATE(), 120) AS created_at,
     NULL AS customer_id,
@@ -27,38 +27,39 @@ SELECT
     NULL AS payment_type,
     NULL AS amount
 FROM 
-    Customers
+    customer
 
 UNION ALL
 
 SELECT 
     'SERVICE_RECORD' AS TYPE,
-    CAST(s.Id AS VARCHAR) AS id,
+    CAST(s.Service_Id AS VARCHAR) AS id,
     NULL AS name,
     NULL AS phone,
-    ISNULL(s.Remarks, '') AS memo,
+    ISNULL(s.Service_Remarks, '') AS memo,
     CONVERT(VARCHAR, GETDATE(), 120) AS created_at,
     CAST(s.CustomerId AS VARCHAR) AS customer_id,
-    CONVERT(VARCHAR, s.Date, 120) AS service_date,
-    s.Contents AS service_content,
-    ISNULL(s.Sales, '') AS product_name,
+    CONVERT(VARCHAR, s.Service_Date, 120) AS service_date,
+    s.Service_Contents AS service_content,
+    ISNULL(s.Service_Sales, '') AS product_name,
     CASE 
-        WHEN s.PayType = '현금' THEN 'cash'
-        WHEN s.PayType = '카드' THEN 'card'
-        WHEN s.PayType IN ('송금', '계좌이체', '이체', '무통장입금') THEN 'transfer'
+        WHEN s.Service_PayType = '현금' THEN 'cash'
+        WHEN s.Service_PayType = '카드' THEN 'card'
+        WHEN s.Service_PayType IN ('송금', '계좌이체', '이체', '무통장입금') THEN 'transfer'
         ELSE 'cash'
     END AS payment_type,
-    CAST(s.Pay AS VARCHAR) AS amount
+    CAST(s.Service_Pay AS VARCHAR) AS amount
 FROM 
-    Service s
+    customerService s
 WHERE 
-    s.CustomerId IN (SELECT Id FROM Customers)  -- 고아 레코드 제외
+    s.CustomerId IN (SELECT Customer_Id FROM customer)  -- 고아 레코드 제외
 ORDER BY 
     TYPE, id;
 
 -- ============================================
 -- 참고: 테이블 구조 확인
 -- ============================================
--- Customers 테이블: Id, Name, Phone
--- Service 테이블: Id, CustomerId, Date, Contents, Sales, PayType, Pay, Remarks
+-- customer 테이블: Customer_Id, Customer_Name, Customer_Phone, Customer_Picture
+-- customerService 테이블: Service_Id, CustomerId, Service_Date, Service_Contents, 
+--                        Service_PayType, Service_Pay, Service_Remarks, Service_Sales
 -- ============================================

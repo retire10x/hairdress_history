@@ -1,13 +1,12 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:sqflite_common/sqflite.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
 import '../models/customer.dart';
 import '../models/service_record.dart';
 
 // 플랫폼별 import - 웹이 아닐 때만 import
 import 'dart:io' if (dart.library.html) 'dart:html';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart' if (dart.library.html) 'dart:html';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart' if (dart.library.html) 'dart:html' show Database, databaseFactory, databaseFactoryFfi, sqfliteFfiInit, openDatabase;
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
@@ -60,29 +59,36 @@ class DatabaseHelper {
       // 웹이 아닌 경우에만 Platform 사용 (kIsWeb 체크로 보호됨)
       // ignore: undefined_prefixed_name
       if (Platform.isWindows) {
-        // Windows에서는 사용자 문서 폴더의 hairdress_history 폴더 사용
+        // Windows에서는 실행파일과 같은 위치에 DB 파일 생성
         // ignore: undefined_prefixed_name
-        final userProfile = Platform.environment['USERPROFILE'] ?? '';
-        final documentsPath = path.join(userProfile, 'Documents', 'hairdress_history');
-        // 디렉토리가 없으면 생성
-        // ignore: undefined_prefixed_name
-        final dir = Directory(documentsPath);
-        if (!await dir.exists()) {
-          await dir.create(recursive: true);
+        String exeDir;
+        try {
+          // 실행파일의 디렉토리 경로 가져오기
+          final exePath = Platform.resolvedExecutable;
+          exeDir = path.dirname(exePath);
+          debugPrint('실행파일 경로: $exePath');
+          debugPrint('실행파일 디렉토리: $exeDir');
+        } catch (e) {
+          // 실행파일 경로를 얻을 수 없으면 현재 작업 디렉토리 사용
+          exeDir = Directory.current.path;
+          debugPrint('실행파일 경로 가져오기 실패, 현재 디렉토리 사용: $exeDir');
         }
-        dbPath = path.join(documentsPath, filePath);
+        dbPath = path.join(exeDir, filePath);
+        debugPrint('계산된 DB 경로: $dbPath');
         // ignore: undefined_prefixed_name
       } else if (Platform.isLinux || Platform.isMacOS) {
-        // Linux/MacOS에서는 홈 디렉토리의 hairdress_history 폴더 사용
+        // Linux/MacOS에서는 실행파일과 같은 위치에 DB 파일 생성
         // ignore: undefined_prefixed_name
-        final homeDir = Platform.environment['HOME'] ?? '';
-        final appDataPath = path.join(homeDir, 'hairdress_history');
-        // ignore: undefined_prefixed_name
-        final dir = Directory(appDataPath);
-        if (!await dir.exists()) {
-          await dir.create(recursive: true);
+        String exeDir;
+        try {
+          // 실행파일의 디렉토리 경로 가져오기
+          final exePath = Platform.resolvedExecutable;
+          exeDir = path.dirname(exePath);
+        } catch (e) {
+          // 실행파일 경로를 얻을 수 없으면 현재 작업 디렉토리 사용
+          exeDir = Directory.current.path;
         }
-        dbPath = path.join(appDataPath, filePath);
+        dbPath = path.join(exeDir, filePath);
       } else {
         // Android/iOS Mobile 플랫폼에서는 sqflite의 getDatabasesPath()를 사용
         // Android에서는 앱의 데이터베이스 디렉토리를 사용해야 함
@@ -91,9 +97,53 @@ class DatabaseHelper {
           if (!kIsWeb) {
             // ignore: undefined_prefixed_name
             if (Platform.isAndroid || Platform.isIOS) {
-              // sqflite 패키지의 getDatabasesPath() 사용
-              final databasesPath = await sqflite.getDatabasesPath();
-              dbPath = path.join(databasesPath, filePath);
+              // Android/iOS: 파일 관리자로 접근 가능한 외부 저장소 경로 사용
+              // ignore: undefined_prefixed_name
+              if (Platform.isAndroid) {
+                // Android: 외부 저장소의 Android/data/com.example.hairdress_history/databases/ 경로 사용
+                final externalDir = await getExternalStorageDirectory();
+                if (externalDir != null) {
+                  // /storage/emulated/0/Android/data/com.example.hairdress_history/files/ 
+                  // -> /storage/emulated/0/Android/data/com.example.hairdress_history/databases/
+                  final androidDataPath = path.dirname(path.dirname(externalDir.path));
+                  final databasesPath = path.join(androidDataPath, 'com.example.hairdress_history', 'databases');
+                  
+                  debugPrint('Android 외부 저장소 경로: $androidDataPath');
+                  debugPrint('Android databases 경로: $databasesPath');
+                  
+                  // databases 폴더가 없으면 생성
+                  final databasesDir = Directory(databasesPath);
+                  if (!await databasesDir.exists()) {
+                    debugPrint('databases 폴더가 없어서 생성합니다: $databasesPath');
+                    await databasesDir.create(recursive: true);
+                  }
+                  
+                  dbPath = path.join(databasesPath, filePath);
+                  debugPrint('Android DB 경로: $dbPath');
+                  
+                  // DB 파일이 있는지 확인
+                  final dbFile = File(dbPath);
+                  final dbExists = await dbFile.exists();
+                  debugPrint('DB 파일 존재 여부: $dbExists');
+                  
+                  if (dbExists) {
+                    final fileSize = await dbFile.length();
+                    debugPrint('기존 DB 파일 크기: $fileSize bytes');
+                  } else {
+                    debugPrint('DB 파일이 없습니다. 새로 생성됩니다.');
+                  }
+                } else {
+                  // 외부 저장소를 사용할 수 없으면 기존 방식 사용
+                  final databasesPath = await sqflite.getDatabasesPath();
+                  dbPath = path.join(databasesPath, filePath);
+                  debugPrint('외부 저장소 사용 불가, 내부 저장소 사용: $dbPath');
+                }
+              } else {
+                // iOS: 기존 방식 사용
+                final databasesPath = await sqflite.getDatabasesPath();
+                dbPath = path.join(databasesPath, filePath);
+                debugPrint('iOS DB 경로: $dbPath');
+              }
             } else {
               // 기타 모바일 플랫폼 (폴백)
               final appDir = await getApplicationDocumentsDirectory();
@@ -117,10 +167,22 @@ class DatabaseHelper {
 
     try {
       debugPrint('DB 경로: $dbPath');
+      
+      // DB 파일이 존재하는지 확인
+      final dbFile = File(dbPath);
+      final dbExists = await dbFile.exists();
+      debugPrint('DB 파일 존재 여부: $dbExists');
+      
+      if (dbExists) {
+        debugPrint('기존 DB 파일 사용: $dbPath');
+      } else {
+        debugPrint('새 DB 파일 생성: $dbPath');
+      }
+      
       final db = await openDatabase(
         dbPath,
         version: 1,
-        onCreate: _createDB,
+        // onCreate는 제거: _ensureTablesExist가 테이블 생성을 처리함
       );
       
       // FOREIGN KEY 활성화 (SQLite는 기본적으로 비활성화)
@@ -133,6 +195,12 @@ class DatabaseHelper {
       
       // 테이블 존재 여부 확인 및 자동 생성
       await _ensureTablesExist(db);
+      
+      // DB 파일 크기 확인
+      if (dbExists) {
+        final fileSize = await dbFile.length();
+        debugPrint('DB 파일 크기: $fileSize bytes');
+      }
       
       return db;
     } catch (e, stackTrace) {
@@ -195,42 +263,6 @@ class DatabaseHelper {
     }
   }
 
-  Future<void> _createDB(Database db, int version) async {
-    // 고객 테이블
-    await db.execute('''
-      CREATE TABLE customers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        phone TEXT,
-        memo TEXT,
-        created_at TEXT NOT NULL
-      )
-    ''');
-
-    // 서비스 기록 테이블
-    await db.execute('''
-      CREATE TABLE service_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER NOT NULL,
-        service_date TEXT NOT NULL,
-        service_content TEXT NOT NULL,
-        product_name TEXT,
-        payment_type TEXT NOT NULL,
-        amount INTEGER NOT NULL,
-        memo TEXT,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
-      )
-    ''');
-
-    // 인덱스 생성
-    await db.execute('''
-      CREATE INDEX idx_customer_id ON service_records(customer_id)
-    ''');
-    await db.execute('''
-      CREATE INDEX idx_service_date ON service_records(service_date)
-    ''');
-  }
 
   // 고객 관련 메서드
   Future<int> insertCustomer(Customer customer) async {
@@ -403,6 +435,31 @@ class DatabaseHelper {
     return result.map((map) => ServiceRecord.fromMap(map)).toList();
   }
 
+  /// 모든 서비스 기록 가져오기 (백업용)
+  Future<List<ServiceRecord>> getAllServiceRecords() async {
+    final db = await database;
+    final result = await db.query(
+      'service_records',
+      orderBy: 'service_date DESC',
+    );
+    return result.map((map) => ServiceRecord.fromMap(map)).toList();
+  }
+
+  /// 고객의 서비스 기록 존재 여부 확인
+  Future<bool> hasServiceRecords(int customerId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count
+      FROM service_records
+      WHERE customer_id = ?
+      ''',
+      [customerId],
+    );
+    final count = result.first['count'] as int;
+    return count > 0;
+  }
+
   /// 특정 날짜에 서비스 기록이 있는 고객 ID 목록을 반환합니다
   Future<List<int>> getCustomerIdsByServiceDate(DateTime date) async {
     final db = await database;
@@ -530,6 +587,60 @@ class DatabaseHelper {
         await insertServiceRecord(record);
       }
     }
+  }
+
+  /// DB 파일 경로 반환
+  Future<String> getDatabasePath() async {
+    await _initializeDatabaseFactory();
+    if (_database != null) {
+      // 이미 열린 DB가 있으면 경로 반환
+      return _database!.path;
+    }
+    // DB가 아직 열리지 않았으면 경로만 계산
+    String dbPath;
+    if (kIsWeb) {
+      dbPath = 'hairdress_history.db';
+    } else {
+      // ignore: undefined_prefixed_name
+      if (Platform.isWindows) {
+        // Windows에서는 실행파일과 같은 위치에 DB 파일 생성
+        // ignore: undefined_prefixed_name
+        String exeDir;
+        try {
+          final exePath = Platform.resolvedExecutable;
+          exeDir = path.dirname(exePath);
+        } catch (e) {
+          exeDir = Directory.current.path;
+        }
+        dbPath = path.join(exeDir, 'hairdress_history.db');
+        // ignore: undefined_prefixed_name
+      } else if (Platform.isLinux || Platform.isMacOS) {
+        // Linux/MacOS에서는 실행파일과 같은 위치에 DB 파일 생성
+        String exeDir;
+        try {
+          final exePath = Platform.resolvedExecutable;
+          exeDir = path.dirname(exePath);
+        } catch (e) {
+          exeDir = Directory.current.path;
+        }
+        dbPath = path.join(exeDir, 'hairdress_history.db');
+      } else {
+        // Android/iOS
+        if (!kIsWeb) {
+          // ignore: undefined_prefixed_name
+          if (Platform.isAndroid || Platform.isIOS) {
+            final databasesPath = await sqflite.getDatabasesPath();
+            dbPath = path.join(databasesPath, 'hairdress_history.db');
+          } else {
+            final appDir = await getApplicationDocumentsDirectory();
+            dbPath = path.join(appDir.path, 'hairdress_history.db');
+          }
+        } else {
+          dbPath = 'hairdress_history.db';
+        }
+      }
+    }
+    return dbPath;
   }
 
   Future<void> close() async {

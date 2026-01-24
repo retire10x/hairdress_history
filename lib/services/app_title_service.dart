@@ -29,54 +29,40 @@ class AppTitleService {
         final homeDir = Platform.environment['HOME'] ?? '';
         filePath = path.join(homeDir, 'hairdress_history', _fileName);
       } else {
-        // Android/iOS: 공개 디렉토리 우선 사용 (사용자가 파일 관리자에서 접근 가능)
-        // 1순위: 다운로드 폴더 (사용자가 가장 쉽게 접근 가능)
-        try {
-          final downloadsDir = await getDownloadsDirectory();
-          if (downloadsDir != null) {
-            filePath = path.join(downloadsDir.path, 'hairdress_history', _fileName);
-            final file = File(filePath);
-            if (await file.exists()) {
-              // 파일이 있으면 읽기
-              final bytes = await file.readAsBytes();
-              final content = utf8.decode(bytes).trim();
-              if (content.isNotEmpty) {
-                _cachedTitle = content;
-                return content;
-              }
+        // Android/iOS: 파일 관리자로 접근 가능한 외부 저장소 경로 사용
+        // ignore: undefined_prefixed_name
+        if (Platform.isAndroid) {
+          // Android: /storage/emulated/0/Android/data/com.example.hairdress_history/app_title.txt
+          try {
+            final externalDir = await getExternalStorageDirectory();
+            if (externalDir != null) {
+              // /storage/emulated/0/Android/data/com.example.hairdress_history/files/
+              // -> /storage/emulated/0/Android/data/com.example.hairdress_history/app_title.txt
+              final androidDataPath = path.dirname(path.dirname(externalDir.path));
+              filePath = path.join(androidDataPath, 'com.example.hairdress_history', _fileName);
+              debugPrint('Android app_title.txt 경로: $filePath');
+            } else {
+              // 외부 저장소를 사용할 수 없으면 앱의 문서 디렉토리 사용
+              final appDir = await getApplicationDocumentsDirectory();
+              filePath = path.join(appDir.path, 'hairdress_history', _fileName);
+              debugPrint('외부 저장소 사용 불가, 앱 문서 디렉토리 사용: $filePath');
             }
+          } catch (e) {
+            debugPrint('Failed to get Android directory for app_title.txt: $e');
+            final appDir = await getApplicationDocumentsDirectory();
+            filePath = path.join(appDir.path, 'hairdress_history', _fileName);
           }
-        } catch (e) {
-          debugPrint('Failed to access Downloads directory: $e');
-        }
-        
-        // 2순위: 앱의 외부 저장소 디렉토리 (권한 없이 접근 가능, 하지만 파일 관리자에서 보이지 않음)
-        try {
-          final externalDir = await getExternalStorageDirectory();
-          if (externalDir != null) {
-            filePath = path.join(externalDir.path, 'hairdress_history', _fileName);
-            final file = File(filePath);
-            if (await file.exists()) {
-              final bytes = await file.readAsBytes();
-              final content = utf8.decode(bytes).trim();
-              if (content.isNotEmpty) {
-                _cachedTitle = content;
-                return content;
-              }
-            }
+        } else {
+          // iOS: 앱의 문서 디렉토리 사용
+          try {
+            final appDir = await getApplicationDocumentsDirectory();
+            filePath = path.join(appDir.path, 'hairdress_history', _fileName);
+            debugPrint('iOS app_title.txt 경로: $filePath');
+          } catch (e) {
+            debugPrint('Failed to get app directory for app_title.txt: $e');
+            _cachedTitle = defaultTitle;
+            return defaultTitle;
           }
-        } catch (e) {
-          debugPrint('Failed to access external storage directory: $e');
-        }
-        
-        // 3순위: 앱의 문서 디렉토리
-        try {
-          final appDir = await getApplicationDocumentsDirectory();
-          filePath = path.join(appDir.path, 'hairdress_history', _fileName);
-        } catch (e) {
-          debugPrint('Failed to get app directory for app_title.txt: $e');
-          _cachedTitle = defaultTitle;
-          return defaultTitle;
         }
       }
       

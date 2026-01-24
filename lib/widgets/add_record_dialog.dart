@@ -114,13 +114,14 @@ class _AddRecordDialogState extends State<AddRecordDialog> {
                     flex: 2,
                     child: InkWell(
                       onTap: () async {
+                        if (!mounted) return;
                         final date = await showDatePicker(
                           context: context,
                           initialDate: _serviceDate,
                           firstDate: DateTime(2000),
                           lastDate: DateTime.now(),
                         );
-                        if (date != null) {
+                        if (date != null && mounted) {
                           final time = await showTimePicker(
                             context: context,
                             initialTime: TimeOfDay.fromDateTime(_serviceDate),

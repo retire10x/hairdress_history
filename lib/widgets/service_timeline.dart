@@ -21,8 +21,12 @@ class ServiceTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 서비스일 최근순으로 정렬 (내림차순)
+    final sortedRecords = List<ServiceRecord>.from(records)
+      ..sort((a, b) => b.serviceDate.compareTo(a.serviceDate));
+    
     // 총 서비스 금액 계산
-    final totalAmount = records.fold<int>(
+    final totalAmount = sortedRecords.fold<int>(
       0,
       (sum, record) => sum + record.amount,
     );
@@ -31,8 +35,8 @@ class ServiceTimeline extends StatelessWidget {
     // 최초일/최종일 계산
     DateTime? firstDate;
     DateTime? lastDate;
-    if (records.isNotEmpty) {
-      final dates = records.map((r) => r.serviceDate).toList();
+    if (sortedRecords.isNotEmpty) {
+      final dates = sortedRecords.map((r) => r.serviceDate).toList();
       dates.sort();
       firstDate = dates.first;
       lastDate = dates.last;
@@ -180,7 +184,7 @@ class ServiceTimeline extends StatelessWidget {
         ),
         // 타임라인
         Expanded(
-          child: records.isEmpty
+          child: sortedRecords.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -210,15 +214,12 @@ class ServiceTimeline extends StatelessWidget {
                   ),
                 )
               : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                  itemCount: records.length,
+                  itemCount: sortedRecords.length,
                   itemBuilder: (context, index) {
-                    final record = records[index];
-                    final isLast = index == records.length - 1;
+                    final record = sortedRecords[index];
 
                     return _TimelineItem(
                       record: record,
-                      isLast: isLast,
                       onEdit: () => onEditRecord(record),
                       onDelete: () => onDeleteRecord(record),
                     );
@@ -232,13 +233,11 @@ class ServiceTimeline extends StatelessWidget {
 
 class _TimelineItem extends StatelessWidget {
   final ServiceRecord record;
-  final bool isLast;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _TimelineItem({
     required this.record,
-    required this.isLast,
     required this.onEdit,
     required this.onDelete,
   });
@@ -246,216 +245,123 @@ class _TimelineItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('yyyy.MM.dd');
-    final timeFormat = DateFormat('HH:mm');
     final numberFormat = NumberFormat('#,###원');
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // 타임라인 라인
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white,
-                  width: 1,
-                ),
-              ),
-            ),
-            if (!isLast)
-              Container(
-                width: 1.5,
-                height: 3,
-                color: Colors.blue[200],
-                margin: const EdgeInsets.symmetric(vertical: 0.5),
-              ),
-          ],
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 4,
+        vertical: 1,
+      ),
+      margin: const EdgeInsets.symmetric(
+        horizontal: 1,
+        vertical: 0,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: Colors.grey[300]!,
+          width: 1,
         ),
-        const SizedBox(width: 4),
-        // 기록 내용
-        Expanded(
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 1),
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey[200]!,
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
             child: Row(
-                children: [
-                  // 날짜/시간
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today,
-                        size: 10,
-                        color: Colors.blue[700],
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        '${dateFormat.format(record.serviceDate)} ${timeFormat.format(record.serviceDate)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue[900],
-                        ),
-                      ),
-                    ],
+              children: [
+                Text(
+                  dateFormat.format(record.serviceDate),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[900],
                   ),
-                  const SizedBox(width: 3),
-                  // 시술 내용
-                  Expanded(
-                    flex: 2,
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.content_cut,
-                          size: 10,
-                          color: Colors.blue[700],
-                        ),
-                        const SizedBox(width: 2),
-                        Expanded(
-                          child: Text(
-                            record.serviceContent,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Colors.black87,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  record.serviceContent,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
                   ),
-                  // 약품명과 메모를 함께 표시
-                  if ((record.productName != null && record.productName!.isNotEmpty) ||
-                      (record.memo != null && record.memo!.isNotEmpty)) ...[
-                    const SizedBox(width: 2),
-                    Expanded(
-                      flex: 1,
-                      child: Row(
-                        children: [
-                          // 약품명
-                          if (record.productName != null &&
-                              record.productName!.isNotEmpty) ...[
-                            Icon(
-                              Icons.medication,
-                              size: 10,
-                              color: Colors.blue[700],
-                            ),
-                            const SizedBox(width: 2),
-                            Expanded(
-                              child: Text(
-                                record.productName!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[700],
-                                  fontStyle: FontStyle.italic,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                          // 메모
-                          if (record.memo != null && record.memo!.isNotEmpty) ...[
-                            if (record.productName != null &&
-                                record.productName!.isNotEmpty)
-                              const SizedBox(width: 2),
-                            Icon(
-                              Icons.note,
-                              size: 10,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 2),
-                            Expanded(
-                              child: Text(
-                                record.memo!,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[700],
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
+                ),
+                if (record.productName != null && record.productName!.isNotEmpty) ...[
                   const SizedBox(width: 3),
-                  // 결제 타입
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 2,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getPaymentColor(record.paymentType),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      record.paymentType.label,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  // 금액
                   Text(
-                    numberFormat.format(record.amount),
+                    '/ ${record.productName!}',
                     style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[900],
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  // 수정/삭제 버튼
-                  IconButton(
-                    onPressed: onEdit,
-                    icon: const Icon(Icons.edit),
-                    iconSize: 12,
-                    color: Colors.blue[700],
-                    padding: const EdgeInsets.all(1),
-                    constraints: const BoxConstraints(
-                      minWidth: 20,
-                      minHeight: 20,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: onDelete,
-                    icon: const Icon(Icons.delete),
-                    iconSize: 12,
-                    color: Colors.red[700],
-                    padding: const EdgeInsets.all(1),
-                    constraints: const BoxConstraints(
-                      minWidth: 20,
-                      minHeight: 20,
+                      fontSize: 14,
+                      color: Colors.grey[600],
                     ),
                   ),
                 ],
-              ),
+                if (record.memo != null && record.memo!.isNotEmpty) ...[
+                  const SizedBox(width: 3),
+                  Text(
+                    '/ ${record.memo!}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 3),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 2,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getPaymentColor(record.paymentType),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    record.paymentType.label,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  numberFormat.format(record.amount),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[900],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // 수정/삭제 버튼
+          IconButton(
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit),
+            iconSize: 16,
+            color: Colors.blue[700],
+            padding: const EdgeInsets.all(1),
+            constraints: const BoxConstraints(
+              minWidth: 24,
+              minHeight: 24,
+            ),
+          ),
+          IconButton(
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete),
+            iconSize: 16,
+            color: Colors.red[700],
+            padding: const EdgeInsets.all(1),
+            constraints: const BoxConstraints(
+              minWidth: 24,
+              minHeight: 24,
             ),
           ),
         ],
-      );
+      ),
+    );
   }
 
   Color _getPaymentColor(PaymentType type) {

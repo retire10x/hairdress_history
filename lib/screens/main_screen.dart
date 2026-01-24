@@ -6,7 +6,6 @@ import '../widgets/customer_list.dart';
 import '../widgets/service_timeline.dart';
 import '../widgets/add_customer_dialog.dart';
 import '../widgets/add_record_dialog.dart';
-import '../widgets/backup_restore_dialog.dart';
 import '../constants/app_config.dart';
 import '../services/app_title_service.dart';
 
@@ -70,7 +69,7 @@ class _MainScreenState extends State<MainScreen> {
           sortByValue = 'amount';
           break;
       }
-      
+
       final customers = await _db.getAllCustomers(
         sortBy: sortByValue,
         order: _sortOrder.name.toUpperCase(),
@@ -161,6 +160,7 @@ class _MainScreenState extends State<MainScreen> {
 
     if (passwordResult == true) {
       // 최종 확인
+      if (!mounted) return;
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -196,7 +196,7 @@ class _MainScreenState extends State<MainScreen> {
             _serviceRecords = [];
             _isLoading = false;
           });
-          
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -262,9 +262,9 @@ class _MainScreenState extends State<MainScreen> {
         await _db.insertCustomer(result);
         await _loadCustomers();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('고객이 추가되었습니다')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('고객이 추가되었습니다')));
         }
       } catch (e, stackTrace) {
         if (mounted) {
@@ -319,9 +319,9 @@ class _MainScreenState extends State<MainScreen> {
           await _selectCustomer(result);
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('고객 정보가 수정되었습니다')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('고객 정보가 수정되었습니다')));
         }
       } catch (e, stackTrace) {
         if (mounted) {
@@ -340,11 +340,38 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _showDeleteCustomerDialog(Customer customer) async {
+    // 서비스 기록이 있는지 확인
+    final hasRecords = await _db.hasServiceRecords(customer.id!);
+
+    if (hasRecords) {
+      // 서비스 기록이 있으면 삭제 불가
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('삭제 불가'),
+            content: Text(
+              '${customer.name} 고객은 서비스 기록이 있어 삭제할 수 없습니다.\n먼저 모든 서비스 기록을 삭제한 후 고객을 삭제해주세요.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('확인'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    // 서비스 기록이 없으면 삭제 확인 다이얼로그 표시
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('고객 삭제'),
-        content: Text('${customer.name} 고객을 삭제하시겠습니까?\n연결된 서비스 기록도 함께 삭제됩니다.'),
+        content: Text('${customer.name} 고객을 삭제하시겠습니까?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -374,9 +401,9 @@ class _MainScreenState extends State<MainScreen> {
         }
         await _loadCustomers();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('고객이 삭제되었습니다')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('고객이 삭제되었습니다')));
         }
       } catch (e, stackTrace) {
         if (mounted) {
@@ -396,17 +423,15 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _showAddRecordDialog() async {
     if (_selectedCustomer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('먼저 고객을 선택해주세요')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('먼저 고객을 선택해주세요')));
       return;
     }
 
     final result = await showDialog<ServiceRecord>(
       context: context,
-      builder: (context) => AddRecordDialog(
-        customerId: _selectedCustomer!.id!,
-      ),
+      builder: (context) => AddRecordDialog(customerId: _selectedCustomer!.id!),
     );
 
     if (result != null) {
@@ -414,9 +439,9 @@ class _MainScreenState extends State<MainScreen> {
         await _db.insertServiceRecord(result);
         await _selectCustomer(_selectedCustomer!);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('서비스 기록이 추가되었습니다')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('서비스 기록이 추가되었습니다')));
         }
       } catch (e, stackTrace) {
         if (mounted) {
@@ -437,10 +462,8 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _showEditRecordDialog(ServiceRecord record) async {
     final result = await showDialog<ServiceRecord>(
       context: context,
-      builder: (context) => AddRecordDialog(
-        customerId: record.customerId,
-        record: record,
-      ),
+      builder: (context) =>
+          AddRecordDialog(customerId: record.customerId, record: record),
     );
 
     if (result != null) {
@@ -448,9 +471,9 @@ class _MainScreenState extends State<MainScreen> {
         await _db.updateServiceRecord(result);
         await _selectCustomer(_selectedCustomer!);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('서비스 기록이 수정되었습니다')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('서비스 기록이 수정되었습니다')));
         }
       } catch (e, stackTrace) {
         if (mounted) {
@@ -496,9 +519,9 @@ class _MainScreenState extends State<MainScreen> {
         await _db.deleteServiceRecord(record.id!);
         await _selectCustomer(_selectedCustomer!);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('서비스 기록이 삭제되었습니다')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('서비스 기록이 삭제되었습니다')));
         }
       } catch (e, stackTrace) {
         if (mounted) {
@@ -514,91 +537,6 @@ class _MainScreenState extends State<MainScreen> {
         debugPrint('스택 트레이스: $stackTrace');
       }
     }
-  }
-
-  Future<void> _showBackupRestoreDialog() async {
-    await showDialog(
-      context: context,
-      builder: (context) => BackupRestoreDialog(
-        onBackupComplete: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('백업이 완료되었습니다'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        },
-        onRestoreComplete: () async {
-          if (!mounted) return;
-          
-          // 데이터 복원 후 강제로 새로고침
-          // 초기화 버튼과 동일한 방식으로 처리
-          setState(() {
-            _selectedCustomer = null;
-            _serviceRecords = [];
-            _isLoading = true;
-          });
-          
-          try {
-            // SortType enum의 name을 데이터베이스 쿼리 형식으로 변환
-            String sortByValue;
-            switch (_sortType) {
-              case SortType.name:
-                sortByValue = 'name';
-                break;
-              case SortType.serviceDate:
-                sortByValue = 'service_date';
-                break;
-              case SortType.amount:
-                sortByValue = 'amount';
-                break;
-            }
-            
-            final customers = await _db.getAllCustomers(
-              sortBy: sortByValue,
-              order: _sortOrder.name.toUpperCase(),
-            );
-            
-            if (mounted) {
-              setState(() {
-                _customers = customers;
-                _isLoading = false;
-              });
-              
-              // 첫 번째 고객이 있으면 자동 선택
-              if (customers.isNotEmpty) {
-                await _selectCustomer(customers.first);
-              }
-              
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('데이터가 복원되었습니다 (고객 ${customers.length}명)'),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-              }
-            }
-          } catch (e, stackTrace) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('데이터 로드 중 오류가 발생했습니다: $e'),
-                  backgroundColor: Colors.red,
-                  duration: const Duration(seconds: 5),
-                ),
-              );
-              debugPrint('복원 후 데이터 로드 오류: $e');
-              debugPrint('스택 트레이스: $stackTrace');
-            }
-          }
-        },
-      ),
-    );
   }
 
   @override
@@ -618,24 +556,15 @@ class _MainScreenState extends State<MainScreen> {
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             onPressed: _clearAllData,
           ),
-          IconButton(
-            icon: const Icon(Icons.backup, size: 18),
-            tooltip: '백업/복원',
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            onPressed: _showBackupRestoreDialog,
-          ),
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : Row(
               children: [
-                // 왼쪽: 고객 목록 (30%)
+                // 왼쪽: 고객 목록 (고정 너비)
                 SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.3,
+                  width: 300,
                   child: CustomerList(
                     customers: _customers,
                     selectedCustomer: _selectedCustomer,
@@ -649,10 +578,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
                 // 구분선
-                Container(
-                  width: 1,
-                  color: Colors.grey[300],
-                ),
+                Container(width: 1, color: Colors.grey[300]),
                 // 오른쪽: 서비스 기록 (70%)
                 Expanded(
                   child: _selectedCustomer == null

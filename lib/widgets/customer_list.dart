@@ -115,13 +115,14 @@ class _CustomerListState extends State<CustomerList> {
     }
 
     final query = _searchQuery.trim();
-    
+
     // 날짜 형식인지 확인
     final date = _parseDate(query);
     if (date != null && _serviceDateCustomerIds != null) {
       // 날짜 검색: 해당 날짜에 서비스 기록이 있는 고객만 필터링
       return widget.customers.where((customer) {
-        return customer.id != null && _serviceDateCustomerIds!.contains(customer.id!);
+        return customer.id != null &&
+            _serviceDateCustomerIds!.contains(customer.id!);
       }).toList();
     }
 
@@ -138,6 +139,7 @@ class _CustomerListState extends State<CustomerList> {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.grey[100],
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Column(
         children: [
           // 헤더
@@ -145,22 +147,33 @@ class _CustomerListState extends State<CustomerList> {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.blue[50],
-              border: Border(
-                bottom: BorderSide(color: Colors.blue[200]!),
-              ),
+              border: Border(bottom: BorderSide(color: Colors.blue[200]!)),
             ),
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      '고객 목록',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
+                    Row(
+                      children: [
+                        const Text(
+                          '고객 목록',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${_filteredCustomers.length}명',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ],
                     ),
                     ElevatedButton.icon(
                       onPressed: widget.onAddCustomer,
@@ -194,8 +207,15 @@ class _CustomerListState extends State<CustomerList> {
                     style: const TextStyle(fontSize: 11, height: 1.0),
                     decoration: InputDecoration(
                       hintText: '이름/전화번호/서비스일 검색',
-                      hintStyle: TextStyle(fontSize: 10, color: Colors.grey[500]),
-                      prefixIcon: const Icon(Icons.search, size: 12, color: Colors.grey),
+                      hintStyle: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        size: 12,
+                        color: Colors.grey,
+                      ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? GestureDetector(
                               onTap: () {
@@ -204,11 +224,18 @@ class _CustomerListState extends State<CustomerList> {
                                   _searchQuery = '';
                                 });
                               },
-                              child: const Icon(Icons.clear, size: 12, color: Colors.grey),
+                              child: const Icon(
+                                Icons.clear,
+                                size: 12,
+                                color: Colors.grey,
+                              ),
                             )
                           : null,
                       isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 0,
+                      ),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
@@ -248,10 +275,7 @@ class _CustomerListState extends State<CustomerList> {
                       return SizedBox(
                         height: 24,
                         child: ChoiceChip(
-                          label: Text(
-                            type.label,
-                            textAlign: TextAlign.center,
-                          ),
+                          label: Text(type.label, textAlign: TextAlign.center),
                           selected: isSelected,
                           onSelected: (selected) {
                             if (selected) {
@@ -261,12 +285,20 @@ class _CustomerListState extends State<CustomerList> {
                           selectedColor: Colors.blue[200],
                           labelStyle: TextStyle(
                             fontSize: 12,
-                            color: isSelected ? Colors.blue[900] : Colors.grey[700],
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected
+                                ? Colors.blue[900]
+                                : Colors.grey[700],
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                             height: 1.2,
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
                           visualDensity: VisualDensity.compact,
                           showCheckmark: false,
                           labelPadding: EdgeInsets.zero,
@@ -284,7 +316,10 @@ class _CustomerListState extends State<CustomerList> {
                           widget.onSortChanged(widget.sortType, newOrder);
                         },
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           minimumSize: const Size(0, 24),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
@@ -336,20 +371,18 @@ class _CustomerListState extends State<CustomerList> {
                     ),
                   )
                 : _filteredCustomers.isEmpty
-                    ? Center(
-                        child: Text(
-                          '검색 결과가 없습니다',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: _filteredCustomers.length,
-                        itemBuilder: (context, index) {
-                          final customer = _filteredCustomers[index];
-                          final isSelected = widget.selectedCustomer?.id == customer.id;
+                ? Center(
+                    child: Text(
+                      '검색 결과가 없습니다',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _filteredCustomers.length,
+                    itemBuilder: (context, index) {
+                      final customer = _filteredCustomers[index];
+                      final isSelected =
+                          widget.selectedCustomer?.id == customer.id;
 
                       return InkWell(
                         onTap: () => widget.onCustomerSelected(customer),
@@ -393,7 +426,7 @@ class _CustomerListState extends State<CustomerList> {
                                       Text(
                                         '• ${customer.phone!}',
                                         style: TextStyle(
-                                          fontSize: 12,
+                                          fontSize: 14,
                                           color: Colors.grey[600],
                                         ),
                                       ),
@@ -401,9 +434,11 @@ class _CustomerListState extends State<CustomerList> {
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 5),
                               // 수정/삭제 버튼
                               IconButton(
-                                onPressed: () => widget.onEditCustomer(customer),
+                                onPressed: () =>
+                                    widget.onEditCustomer(customer),
                                 icon: const Icon(Icons.edit),
                                 iconSize: 16,
                                 color: Colors.blue[700],
@@ -414,7 +449,8 @@ class _CustomerListState extends State<CustomerList> {
                                 ),
                               ),
                               IconButton(
-                                onPressed: () => widget.onDeleteCustomer(customer),
+                                onPressed: () =>
+                                    widget.onDeleteCustomer(customer),
                                 icon: const Icon(Icons.delete),
                                 iconSize: 16,
                                 color: Colors.red[700],

@@ -1,0 +1,16 @@
+exec sp_help customer
+Customer_Id	int	no	4	10   	0    	no	(n/a)	(n/a)	NULL
+Customer_Name	nvarchar	no	100	     	     	no	(n/a)	(n/a)	Korean_Wansung_CI_AS
+Customer_Phone	nvarchar	no	100	     	     	no	(n/a)	(n/a)	Korean_Wansung_CI_AS
+Customer_Picture	varbinary	no	-1	     	     	yes	no	yes	NULL
+
+
+exec sp_help customerService
+Service_Id	int	no	4	10   	0    	no	(n/a)	(n/a)	NULL
+CustomerId	int	no	4	10   	0    	no	(n/a)	(n/a)	NULL
+Service_Date	date	no	3	10   	0    	no	(n/a)	(n/a)	NULL
+Service_Contents	nvarchar	no	1000	     	     	no	(n/a)	(n/a)	Korean_Wansung_CI_AS
+Service_PayType	nvarchar	no	20	     	     	no	(n/a)	(n/a)	Korean_Wansung_CI_AS
+Service_Pay	int	no	4	10   	0    	no	(n/a)	(n/a)	NULL
+Service_Remarks	nvarchar	no	1000	     	     	yes	(n/a)	(n/a)	Korean_Wansung_CI_AS
+Service_Sales	nvarchar	no	1000	     	     	yes	(n/a)	(n/a)	Korean_Wansung_CI_AS
