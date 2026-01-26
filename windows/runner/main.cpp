@@ -26,7 +26,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
-  Win32Window::Size size(1280, 720);
+  // Portrait mode test: Galaxy Tab S7 FE portrait size (800x1200)
+  Win32Window::Size size(800, 1200);
   // Window title: displayed next to the icon in the title bar
   // Unicode escape for "Customer Management" in Korean: \uACE0\uAC1D \uAD00\uB9AC
   if (!window.Create(L"\uACE0\uAC1D \uAD00\uB9AC", origin, size)) {

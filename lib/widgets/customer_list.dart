@@ -195,7 +195,7 @@ class _CustomerListState extends State<CustomerList> {
                 const SizedBox(height: 2),
                 // 검색창
                 Container(
-                  height: 24,
+                  height: 28,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(4),
@@ -204,11 +204,12 @@ class _CustomerListState extends State<CustomerList> {
                   child: TextField(
                     controller: _searchController,
                     textAlign: TextAlign.center,
+                    textAlignVertical: TextAlignVertical.center,
                     style: const TextStyle(fontSize: 11, height: 1.0),
                     decoration: InputDecoration(
                       hintText: '이름/전화번호/서비스일 검색',
                       hintStyle: TextStyle(
-                        fontSize: 10,
+                        fontSize: 14,
                         color: Colors.grey[500],
                       ),
                       prefixIcon: const Icon(
@@ -257,53 +258,51 @@ class _CustomerListState extends State<CustomerList> {
                 ),
                 const SizedBox(height: 2),
                 // 정렬 옵션
-                Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Text(
-                      '정렬: ',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
                     // 정렬 타입 선택
-                    ...SortType.values.map((type) {
+                    ...SortType.values.expand((type) {
                       final isSelected = widget.sortType == type;
-                      return SizedBox(
-                        height: 24,
-                        child: ChoiceChip(
-                          label: Text(type.label, textAlign: TextAlign.center),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            if (selected) {
-                              widget.onSortChanged(type, widget.sortOrder);
-                            }
-                          },
-                          selectedColor: Colors.blue[200],
-                          labelStyle: TextStyle(
-                            fontSize: 12,
-                            color: isSelected
-                                ? Colors.blue[900]
-                                : Colors.grey[700],
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                            height: 1.2,
+                      return [
+                        SizedBox(
+                          height: 24,
+                          child: ChoiceChip(
+                            label: Text(
+                              type.label,
+                              textAlign: TextAlign.center,
+                            ),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              if (selected) {
+                                widget.onSortChanged(type, widget.sortOrder);
+                              }
+                            },
+                            selectedColor: Colors.blue[200],
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              color: isSelected
+                                  ? Colors.blue[900]
+                                  : Colors.grey[700],
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              height: 1.0,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 0,
+                            ),
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                            showCheckmark: false,
+                            labelPadding: EdgeInsets.zero,
                           ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
-                          showCheckmark: false,
-                          labelPadding: EdgeInsets.zero,
                         ),
-                      );
+                        const SizedBox(width: 4),
+                      ];
                     }),
                     // 정렬 순서 선택
                     SizedBox(
@@ -318,7 +317,7 @@ class _CustomerListState extends State<CustomerList> {
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
-                            vertical: 2,
+                            vertical: 0,
                           ),
                           minimumSize: const Size(0, 24),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -326,9 +325,9 @@ class _CustomerListState extends State<CustomerList> {
                         child: Text(
                           widget.sortOrder == SortOrder.asc ? '↑' : '↓',
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            height: 1.2,
+                            height: 1.0,
                           ),
                           textAlign: TextAlign.center,
                         ),

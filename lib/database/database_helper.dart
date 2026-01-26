@@ -97,52 +97,47 @@ class DatabaseHelper {
           if (!kIsWeb) {
             // ignore: undefined_prefixed_name
             if (Platform.isAndroid || Platform.isIOS) {
-              // Android/iOS: 파일 관리자로 접근 가능한 외부 저장소 경로 사용
-              // ignore: undefined_prefixed_name
-              if (Platform.isAndroid) {
-                // Android: 외부 저장소의 Android/data/com.example.hairdress_history/databases/ 경로 사용
-                final externalDir = await getExternalStorageDirectory();
-                if (externalDir != null) {
-                  // /storage/emulated/0/Android/data/com.example.hairdress_history/files/ 
-                  // -> /storage/emulated/0/Android/data/com.example.hairdress_history/databases/
-                  final androidDataPath = path.dirname(path.dirname(externalDir.path));
-                  final databasesPath = path.join(androidDataPath, 'com.example.hairdress_history', 'databases');
-                  
-                  debugPrint('Android 외부 저장소 경로: $androidDataPath');
-                  debugPrint('Android databases 경로: $databasesPath');
-                  
-                  // databases 폴더가 없으면 생성
-                  final databasesDir = Directory(databasesPath);
-                  if (!await databasesDir.exists()) {
-                    debugPrint('databases 폴더가 없어서 생성합니다: $databasesPath');
-                    await databasesDir.create(recursive: true);
+              // Android/iOS: 내부 데이터베이스 경로 사용 (sqflite.getDatabasesPath())
+              // 외부 저장소 경로는 쓰기 권한 문제로 사용하지 않음
+              final databasesPath = await sqflite.getDatabasesPath();
+              dbPath = path.join(databasesPath, filePath);
+              
+              debugPrint('Android/iOS databases 경로: $databasesPath');
+              debugPrint('Android/iOS DB 경로: $dbPath');
+              
+              // databases 폴더가 없으면 생성
+              final databasesDir = Directory(databasesPath);
+              if (!await databasesDir.exists()) {
+                debugPrint('databases 폴더가 없어서 생성합니다: $databasesPath');
+                await databasesDir.create(recursive: true);
+              }
+              
+              // DB 파일이 있는지 확인
+              final dbFile = File(dbPath);
+              final dbExists = await dbFile.exists();
+              debugPrint('DB 파일 존재 여부: $dbExists');
+              
+              if (dbExists) {
+                final fileSize = await dbFile.length();
+                debugPrint('기존 DB 파일 크기: $fileSize bytes');
+                
+                // 파일 권한 확인 및 수정 시도 (Android에서만)
+                // ignore: undefined_prefixed_name
+                if (Platform.isAndroid) {
+                  try {
+                    // 파일이 읽기 전용인지 확인
+                    final stat = await dbFile.stat();
+                    debugPrint('DB 파일 권한: ${stat.mode}');
+                    
+                    // 파일이 존재하지만 쓰기 권한이 없을 수 있으므로
+                    // 파일을 삭제하고 재생성하도록 시도
+                    // (실제로는 openDatabase가 자동으로 처리하지만, 명시적으로 확인)
+                  } catch (e) {
+                    debugPrint('DB 파일 권한 확인 실패: $e');
                   }
-                  
-                  dbPath = path.join(databasesPath, filePath);
-                  debugPrint('Android DB 경로: $dbPath');
-                  
-                  // DB 파일이 있는지 확인
-                  final dbFile = File(dbPath);
-                  final dbExists = await dbFile.exists();
-                  debugPrint('DB 파일 존재 여부: $dbExists');
-                  
-                  if (dbExists) {
-                    final fileSize = await dbFile.length();
-                    debugPrint('기존 DB 파일 크기: $fileSize bytes');
-                  } else {
-                    debugPrint('DB 파일이 없습니다. 새로 생성됩니다.');
-                  }
-                } else {
-                  // 외부 저장소를 사용할 수 없으면 기존 방식 사용
-                  final databasesPath = await sqflite.getDatabasesPath();
-                  dbPath = path.join(databasesPath, filePath);
-                  debugPrint('외부 저장소 사용 불가, 내부 저장소 사용: $dbPath');
                 }
               } else {
-                // iOS: 기존 방식 사용
-                final databasesPath = await sqflite.getDatabasesPath();
-                dbPath = path.join(databasesPath, filePath);
-                debugPrint('iOS DB 경로: $dbPath');
+                debugPrint('DB 파일이 없습니다. 새로 생성됩니다.');
               }
             } else {
               // 기타 모바일 플랫폼 (폴백)
@@ -179,11 +174,34 @@ class DatabaseHelper {
         debugPrint('새 DB 파일 생성: $dbPath');
       }
       
-      final db = await openDatabase(
-        dbPath,
-        version: 1,
-        // onCreate는 제거: _ensureTablesExist가 테이블 생성을 처리함
-      );
+      Database db;
+      try {
+        db = await openDatabase(
+          dbPath,
+          version: 1,
+          // onCreate는 제거: _ensureTablesExist가 테이블 생성을 처리함
+        );
+      } catch (e) {
+        // 읽기 전용 오류 발생 시 파일 삭제 후 재시도
+        if (e.toString().contains('readonly') || e.toString().contains('SQLITE_READONLY')) {
+          debugPrint('읽기 전용 오류 발생, DB 파일 삭제 후 재생성: $e');
+          try {
+            if (await dbFile.exists()) {
+              await dbFile.delete();
+              debugPrint('기존 DB 파일 삭제 완료');
+            }
+          } catch (deleteError) {
+            debugPrint('DB 파일 삭제 실패: $deleteError');
+          }
+          // 재시도
+          db = await openDatabase(
+            dbPath,
+            version: 1,
+          );
+        } else {
+          rethrow;
+        }
+      }
       
       // FOREIGN KEY 활성화 (SQLite는 기본적으로 비활성화)
       // 웹에서는 PRAGMA가 작동하지 않을 수 있으므로 try-catch로 처리
