@@ -122,21 +122,14 @@ class _AddRecordDialogState extends State<AddRecordDialog> {
                           lastDate: DateTime.now(),
                         );
                         if (date != null && mounted) {
-                          final time = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.fromDateTime(_serviceDate),
-                          );
-                          if (time != null) {
-                            setState(() {
-                              _serviceDate = DateTime(
-                                date.year,
-                                date.month,
-                                date.day,
-                                time.hour,
-                                time.minute,
-                              );
-                            });
-                          }
+                          setState(() {
+                            // 시간은 사용하지 않으므로 0시 0분으로 설정
+                            _serviceDate = DateTime(
+                              date.year,
+                              date.month,
+                              date.day,
+                            );
+                          });
                         }
                       },
                       child: Container(
@@ -152,7 +145,7 @@ class _AddRecordDialogState extends State<AddRecordDialog> {
                             const SizedBox(width: 8),
                             Flexible(
                               child: Text(
-                                '${_serviceDate.year}.${_serviceDate.month.toString().padLeft(2, '0')}.${_serviceDate.day.toString().padLeft(2, '0')} ${_serviceDate.hour.toString().padLeft(2, '0')}:${_serviceDate.minute.toString().padLeft(2, '0')}',
+                                '${_serviceDate.year}.${_serviceDate.month.toString().padLeft(2, '0')}.${_serviceDate.day.toString().padLeft(2, '0')}',
                                 style: const TextStyle(fontSize: 14),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -300,10 +293,16 @@ class _AddRecordDialogState extends State<AddRecordDialog> {
 
   void _save() {
     if (_formKey.currentState!.validate()) {
+      // 시간은 사용하지 않으므로 0시 0분으로 설정
+      final serviceDate = DateTime(
+        _serviceDate.year,
+        _serviceDate.month,
+        _serviceDate.day,
+      );
       final record = ServiceRecord(
         id: widget.record?.id,
         customerId: widget.customerId,
-        serviceDate: _serviceDate,
+        serviceDate: serviceDate,
         serviceContent: _serviceContentController.text.trim(),
         productName: _productNameController.text.trim().isEmpty
             ? null
