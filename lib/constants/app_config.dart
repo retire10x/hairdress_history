@@ -1,7 +1,7 @@
 /// 앱 설정 상수
 class AppConfig {
   /// 앱 브랜드 이름
-  static const String appName = 'hairdress_history';
+  static const String appName = '반하다 헤어';
   
   /// 앱 타이틀 (브라우저 탭 제목 등)
   static const String appTitle = '고객 관리';

@@ -29,12 +29,12 @@ class ServiceTimeline extends StatelessWidget {
     final sortedRecords = List<ServiceRecord>.from(records)
       ..sort((a, b) => b.serviceDate.compareTo(a.serviceDate));
 
-    // 총 서비스 금액 계산
-    final totalAmount = sortedRecords.fold<int>(
-      0,
-      (sum, record) => sum + record.amount,
-    );
-    final formattedTotal = NumberFormat('#,###').format(totalAmount);
+    // 총 서비스 금액 계산 (사용하지 않음 - 합계는 0원으로 고정)
+    // final totalAmount = sortedRecords.fold<int>(
+    //   0,
+    //   (sum, record) => sum + record.amount,
+    // );
+    // final formattedTotal = NumberFormat('#,###').format(totalAmount);
 
     // 최초일/최종일 계산
     DateTime? firstDate;
@@ -84,15 +84,9 @@ class ServiceTimeline extends StatelessWidget {
                       const SizedBox(width: 8),
                       Icon(Icons.phone, size: 14, color: Colors.grey[700]),
                       const SizedBox(width: 3),
-                      Flexible(
-                        child: Text(
-                          customer.phone!,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      Text(
+                        customer.phone!,
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       ),
                     ],
                     if (customer.memo != null && customer.memo!.isNotEmpty) ...[
@@ -130,7 +124,7 @@ class ServiceTimeline extends StatelessWidget {
                             ),
                           ),
                         Text(
-                          '합계: $formattedTotal원',
+                          '합계: 0원',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -153,7 +147,7 @@ class ServiceTimeline extends StatelessWidget {
                           const SizedBox(width: 6),
                         ],
                         Text(
-                          '합계: $formattedTotal원',
+                          '합계: 0원',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -276,12 +270,12 @@ class _TimelineItem extends StatelessWidget {
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 첫 번째 줄: 날짜, 서비스 내용, 제품명, 결제 타입
+                      // 첫 번째 줄: 날짜, 서비스 내용, 제품명
                       Row(
                         children: [
-                          // 날짜 (고정 너비 100px)
-                          SizedBox(
-                            width: 100,
+                          // 날짜 (유연한 너비)
+                          Flexible(
+                            flex: 2,
                             child: Tooltip(
                               message: dateFormat.format(record.serviceDate),
                               child: Text(
@@ -296,9 +290,9 @@ class _TimelineItem extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 3),
-                          // 서비스 내용 (고정 너비 150px)
-                          SizedBox(
-                            width: 150,
+                          // 서비스 내용 (유연한 너비)
+                          Flexible(
+                            flex: 3,
                             child: Tooltip(
                               message: record.serviceContent,
                               child: Text(
@@ -312,26 +306,31 @@ class _TimelineItem extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 3),
-                          // 제품명 (고정 너비 100px, 선택적)
-                          SizedBox(
-                            width: 100,
-                            child:
-                                record.productName != null &&
-                                    record.productName!.isNotEmpty
-                                ? Tooltip(
-                                    message: record.productName!,
-                                    child: Text(
-                                      '/ ${record.productName!}',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                          const SizedBox(width: 3),
+                          // 제품명 (유연한 너비, 선택적)
+                          if (record.productName != null &&
+                              record.productName!.isNotEmpty)
+                            Flexible(
+                              flex: 2,
+                              child: Tooltip(
+                                message: record.productName!,
+                                child: Text(
+                                  '/ ${record.productName!}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      // 두 번째 줄: 결제 타입, 금액, 메모 (결제 타입이 시술일 중간부터 시작)
+                      Row(
+                        children: [
+                          // 날짜 너비의 중간만큼 여백 (시술일 중간 위치)
+                          const SizedBox(width: 50),
                           // 결제 타입 (고정 너비 60px)
                           SizedBox(
                             width: 60,
@@ -356,12 +355,7 @@ class _TimelineItem extends StatelessWidget {
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      // 두 번째 줄: 금액, 메모 (왼쪽부터 시작)
-                      Row(
-                        children: [
+                          const SizedBox(width: 10),
                           // 금액 (고정 너비 100px)
                           SizedBox(
                             width: 100,
