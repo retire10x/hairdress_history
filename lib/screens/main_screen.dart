@@ -259,6 +259,25 @@ class _MainScreenState extends State<MainScreen> {
 
     if (result != null) {
       try {
+        // 중복 체크
+        final isDuplicate = await _db.checkDuplicateCustomer(
+          result.name,
+          result.phone,
+        );
+        
+        if (isDuplicate) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('동일한 이름과 전화번호를 가진 고객이 이미 존재합니다'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
+        
         await _db.insertCustomer(result);
         await _loadCustomers();
         if (mounted) {
@@ -312,6 +331,26 @@ class _MainScreenState extends State<MainScreen> {
 
     if (result != null) {
       try {
+        // 중복 체크 (현재 고객 ID 제외)
+        final isDuplicate = await _db.checkDuplicateCustomer(
+          result.name,
+          result.phone,
+          excludeId: result.id,
+        );
+        
+        if (isDuplicate) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('동일한 이름과 전화번호를 가진 고객이 이미 존재합니다'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
+        }
+        
         await _db.updateCustomer(result);
         await _loadCustomers();
         // 수정된 고객이 선택되어 있으면 다시 선택

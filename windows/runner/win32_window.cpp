@@ -150,8 +150,8 @@ bool Win32Window::Create(const std::wstring& title,
 }
 
 bool Win32Window::Show() {
-  // Maximize window to full screen on startup
-  return ShowWindow(window_handle_, SW_MAXIMIZE);
+  // Show window with specified size (not maximized for portrait mode testing)
+  return ShowWindow(window_handle_, SW_SHOW);
 }
 
 // static

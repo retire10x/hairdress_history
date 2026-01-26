@@ -21,6 +21,10 @@ class ServiceTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 화면 너비 확인 (세로 모드 감지)
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isPortrait = screenWidth < 1000; // 1000px 미만이면 세로 모드로 간주
+
     // 서비스일 최근순으로 정렬 (내림차순)
     final sortedRecords = List<ServiceRecord>.from(records)
       ..sort((a, b) => b.serviceDate.compareTo(a.serviceDate));
@@ -58,17 +62,21 @@ class ServiceTimeline extends StatelessWidget {
           ),
           child: Row(
             children: [
+              // 좌측: 고객 정보 (Expanded로 공간 확보)
               Expanded(
                 child: Row(
                   children: [
                     Icon(Icons.person, size: 18, color: Colors.blue[900]),
                     const SizedBox(width: 6),
-                    Text(
-                      customer.name,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[900],
+                    Flexible(
+                      child: Text(
+                        customer.name,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue[900],
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (customer.phone != null &&
@@ -76,9 +84,15 @@ class ServiceTimeline extends StatelessWidget {
                       const SizedBox(width: 8),
                       Icon(Icons.phone, size: 14, color: Colors.grey[700]),
                       const SizedBox(width: 3),
-                      Text(
-                        customer.phone!,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      Flexible(
+                        child: Text(
+                          customer.phone!,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                     if (customer.memo != null && customer.memo!.isNotEmpty) ...[
@@ -100,28 +114,56 @@ class ServiceTimeline extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              // 최초일/최종일 및 합계 표시
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (firstDate != null && lastDate != null) ...[
-                    Text(
-                      '${formatDate(firstDate)}/${formatDate(lastDate)}',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              // 우측: 최초일/최종일 및 합계 표시
+              // 세로 모드일 때는 2줄로, 가로 모드일 때는 1줄로 표시
+              isPortrait
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (firstDate != null && lastDate != null)
+                          Text(
+                            '${formatDate(firstDate)}/${formatDate(lastDate)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        Text(
+                          '합계: $formattedTotal원',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (firstDate != null && lastDate != null) ...[
+                          Text(
+                            '${formatDate(firstDate)}/${formatDate(lastDate)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(
+                          '합계: $formattedTotal원',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 6),
-                  ],
-                  Text(
-                    '합계: $formattedTotal원',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green[700],
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(width: 6),
+              // 기록 추가 버튼
               ElevatedButton.icon(
                 onPressed: onAddRecord,
                 icon: const Icon(Icons.add, size: 16),
@@ -215,6 +257,10 @@ class _TimelineItem extends StatelessWidget {
     final dateFormat = DateFormat('yyyy.MM.dd');
     final numberFormat = NumberFormat('#,###원');
 
+    // 화면 너비 확인 (세로 모드 감지)
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isPortrait = screenWidth < 1000; // 1000px 미만이면 세로 모드로 간주
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 0),
@@ -226,124 +272,253 @@ class _TimelineItem extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 날짜 (고정 너비 100px)
-                SizedBox(
-                  width: 100,
-                  child: Tooltip(
-                    message: dateFormat.format(record.serviceDate),
-                    child: Text(
-                      dateFormat.format(record.serviceDate),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[900],
+            child: isPortrait
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 첫 번째 줄: 날짜, 서비스 내용, 제품명, 결제 타입
+                      Row(
+                        children: [
+                          // 날짜 (고정 너비 100px)
+                          SizedBox(
+                            width: 100,
+                            child: Tooltip(
+                              message: dateFormat.format(record.serviceDate),
+                              child: Text(
+                                dateFormat.format(record.serviceDate),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[900],
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          // 서비스 내용 (고정 너비 150px)
+                          SizedBox(
+                            width: 150,
+                            child: Tooltip(
+                              message: record.serviceContent,
+                              child: Text(
+                                record.serviceContent,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          // 제품명 (고정 너비 100px, 선택적)
+                          SizedBox(
+                            width: 100,
+                            child:
+                                record.productName != null &&
+                                    record.productName!.isNotEmpty
+                                ? Tooltip(
+                                    message: record.productName!,
+                                    child: Text(
+                                      '/ ${record.productName!}',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                          const SizedBox(width: 3),
+                          // 결제 타입 (고정 너비 60px)
+                          SizedBox(
+                            width: 60,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 2,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _getPaymentColor(record.paymentType),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                record.paymentType.label,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 3),
-                // 서비스 내용 (고정 너비 150px)
-                SizedBox(
-                  width: 150,
-                  child: Tooltip(
-                    message: record.serviceContent,
-                    child: Text(
-                      record.serviceContent,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
+                      const SizedBox(height: 4),
+                      // 두 번째 줄: 금액, 메모 (왼쪽부터 시작)
+                      Row(
+                        children: [
+                          // 금액 (고정 너비 100px)
+                          SizedBox(
+                            width: 100,
+                            child: Tooltip(
+                              message: numberFormat.format(record.amount),
+                              child: Text(
+                                numberFormat.format(record.amount),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[900],
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          // 메모 (나머지 공간 사용)
+                          Expanded(
+                            child:
+                                record.memo != null && record.memo!.isNotEmpty
+                                ? Tooltip(
+                                    message: record.memo!,
+                                    child: Text(
+                                      record.memo!,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 3),
-                // 제품명 (고정 너비 100px, 선택적)
-                SizedBox(
-                  width: 100,
-                  child:
-                      record.productName != null &&
-                          record.productName!.isNotEmpty
-                      ? Tooltip(
-                          message: record.productName!,
+                    ],
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 날짜 (고정 너비 100px)
+                      SizedBox(
+                        width: 100,
+                        child: Tooltip(
+                          message: dateFormat.format(record.serviceDate),
                           child: Text(
-                            '/ ${record.productName!}',
+                            dateFormat.format(record.serviceDate),
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[900],
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                const SizedBox(width: 3),
-                // 결제 타입 (고정 너비 60px)
-                SizedBox(
-                  width: 60,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 2,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getPaymentColor(record.paymentType),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      record.paymentType.label,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        ),
                       ),
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                // 금액 (고정 너비 100px)
-                SizedBox(
-                  width: 100,
-                  child: Tooltip(
-                    message: numberFormat.format(record.amount),
-                    child: Text(
-                      numberFormat.format(record.amount),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue[900],
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.right,
-                    ),
-                  ),
-                ),
-                Container(width: 30),
-                // 메모 (고정 너비 100px, 선택적, 금액 우측)
-                SizedBox(
-                  width: 100,
-                  child: record.memo != null && record.memo!.isNotEmpty
-                      ? Tooltip(
-                          message: record.memo!,
+                      const SizedBox(width: 3),
+                      // 서비스 내용 (고정 너비 150px)
+                      SizedBox(
+                        width: 150,
+                        child: Tooltip(
+                          message: record.serviceContent,
                           child: Text(
-                            record.memo!,
-                            style: TextStyle(
+                            record.serviceContent,
+                            style: const TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: Colors.black87,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ],
-            ),
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      // 제품명 (고정 너비 100px, 선택적)
+                      SizedBox(
+                        width: 100,
+                        child:
+                            record.productName != null &&
+                                record.productName!.isNotEmpty
+                            ? Tooltip(
+                                message: record.productName!,
+                                child: Text(
+                                  '/ ${record.productName!}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      const SizedBox(width: 3),
+                      // 결제 타입 (고정 너비 60px)
+                      SizedBox(
+                        width: 60,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 2,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getPaymentColor(record.paymentType),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            record.paymentType.label,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // 금액 (고정 너비 100px)
+                      SizedBox(
+                        width: 100,
+                        child: Tooltip(
+                          message: numberFormat.format(record.amount),
+                          child: Text(
+                            numberFormat.format(record.amount),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[900],
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 30),
+                      // 메모 (고정 너비 100px, 선택적, 금액 우측)
+                      SizedBox(
+                        width: 100,
+                        child: record.memo != null && record.memo!.isNotEmpty
+                            ? Tooltip(
+                                message: record.memo!,
+                                child: Text(
+                                  record.memo!,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
           ),
           // 수정/삭제 버튼
           IconButton(

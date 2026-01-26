@@ -283,6 +283,39 @@ class DatabaseHelper {
 
 
   // 고객 관련 메서드
+  /// 동일한 이름과 전화번호를 가진 고객이 존재하는지 확인
+  /// excludeId: 수정 시 현재 고객 ID를 제외하고 체크
+  Future<bool> checkDuplicateCustomer(String name, String? phone, {int? excludeId}) async {
+    final db = await database;
+    
+    // 전화번호가 null이거나 빈 문자열인 경우도 처리
+    if (phone == null || phone.isEmpty) {
+      // 전화번호가 없는 경우: 이름만으로 중복 체크
+      final result = await db.rawQuery(
+        '''
+        SELECT COUNT(*) as count
+        FROM customers
+        WHERE name = ? AND (phone IS NULL OR phone = '')
+        ${excludeId != null ? 'AND id != ?' : ''}
+        ''',
+        excludeId != null ? [name, excludeId] : [name],
+      );
+      return (result.first['count'] as int) > 0;
+    } else {
+      // 전화번호가 있는 경우: 이름과 전화번호 모두 일치하는지 체크
+      final result = await db.rawQuery(
+        '''
+        SELECT COUNT(*) as count
+        FROM customers
+        WHERE name = ? AND phone = ?
+        ${excludeId != null ? 'AND id != ?' : ''}
+        ''',
+        excludeId != null ? [name, phone, excludeId] : [name, phone],
+      );
+      return (result.first['count'] as int) > 0;
+    }
+  }
+
   Future<int> insertCustomer(Customer customer) async {
     final db = await database;
     final map = customer.toMap();
