@@ -205,7 +205,11 @@ class _CustomerListState extends State<CustomerList> {
                     controller: _searchController,
                     textAlign: TextAlign.center,
                     textAlignVertical: TextAlignVertical.center,
-                    style: const TextStyle(fontSize: 11, height: 1.0),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      height: 1.0,
+                    ),
                     decoration: InputDecoration(
                       hintText: '이름/전화번호/서비스일 검색',
                       hintStyle: TextStyle(
